@@ -43,29 +43,10 @@
             background-color: #EAE5DF;
             color: #0F3B2F;
             overflow-x: hidden;
-            cursor: none;
         }
         
         ::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .custom-cursor {
-            position: fixed; top: 0; left: 0; width: 20px; height: 20px;
-            border-radius: 50%; background-color: #C8A97E; pointer-events: none;
-            z-index: 9999; transform: translate(-50%, -50%);
-            transition: width 0.3s, height 0.3s, background-color 0.3s;
-            mix-blend-mode: difference;
-        }
-
-        .cursor-hover {
-            width: 80px; height: 80px; background-color: rgba(200, 169, 126, 0.8);
-            display: flex; align-items: center; justify-content: center;
-        }
-        
-        .cursor-hover::after {
-            content: var(--cursor-text, 'Ver'); font-family: 'Inter', sans-serif;
-            font-size: 12px; color: #0F3B2F; font-weight: 500; opacity: 1;
-        }
 
         .img-wrap { overflow: hidden; }
         .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.5s cubic-bezier(0.19, 1, 0.22, 1); }
@@ -162,8 +143,6 @@
     </style>
 </head>
 <body class="antialiased font-sans selection:bg-champagne selection:text-forest">
-
-    <div class="custom-cursor" id="cursor"></div>
 
     <div id="preloader">
         <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -717,30 +696,6 @@
         gsap.ticker.add((time)=>{ lenis.raf(time * 1000); });
         gsap.ticker.lagSmoothing(0);
 
-        // 2. Cursor Custom
-        const cursor = document.getElementById('cursor');
-        const root = document.documentElement;
-        document.addEventListener('mousemove', (e) => {
-            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1, ease: "power2.out" });
-        });
-
-        const setupHover = (selector, text, scale) => {
-            document.querySelectorAll(selector).forEach(item => {
-                item.addEventListener('mouseenter', () => {
-                    if(text) { root.style.setProperty('--cursor-text', `"${text}"`); cursor.classList.add('cursor-hover'); }
-                    if(scale) gsap.to(cursor, {scale: scale, duration: 0.3});
-                });
-                item.addEventListener('mouseleave', () => {
-                    cursor.classList.remove('cursor-hover');
-                    if(scale) gsap.to(cursor, {scale: 1, duration: 0.3});
-                });
-            });
-        };
-        setupHover('.cursor-gallery', 'Ver', null);
-        setupHover('.cursor-swiper', 'Deslizar', null);
-        setupHover('.cursor-orbit', 'Orbitar', null);
-        setupHover('.hover-target:not(.cursor-gallery)', '', 1.5);
-
         // 3. Preloader y Scroll Animaciones
         window.addEventListener('load', () => {
             const tl = gsap.timeline();
@@ -921,7 +876,7 @@
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true; 
             controls.dampingFactor = 0.05;
-            controls.enableZoom = false; 
+            controls.enableZoom = true; // ← ¡Cambiado de false a true para permitir el acercamiento!
             controls.enablePan = false;
             controls.minPolarAngle = Math.PI / 3; 
             controls.maxPolarAngle = Math.PI / 1.5; 
