@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>+Art Studio | Galería Contemporánea</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: '#0F3B2F',
+                        emerald: '#1F4D40',
+                        elegant: '#2E5E50',
+                        champagne: '#C8A97E',
+                        beige: '#EAE5DF',
+                    },
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #EAE5DF;
+            color: #0F3B2F;
+            overflow-x: hidden;
+            cursor: none;
+        }
+        
+        ::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .custom-cursor {
+            position: fixed; top: 0; left: 0; width: 20px; height: 20px;
+            border-radius: 50%; background-color: #C8A97E; pointer-events: none;
+            z-index: 9999; transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s;
+            mix-blend-mode: difference;
+        }
+
+        .cursor-hover {
+            width: 80px; height: 80px; background-color: rgba(200, 169, 126, 0.8);
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        .cursor-hover::after {
+            content: var(--cursor-text, 'Ver'); font-family: 'Inter', sans-serif;
+            font-size: 12px; color: #0F3B2F; font-weight: 500; opacity: 1;
+        }
+
+        .img-wrap { overflow: hidden; }
+        .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.5s cubic-bezier(0.19, 1, 0.22, 1); }
+        .img-hover-scale:hover img { transform: scale(1.08); }
+
+        #preloader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: linear-gradient(135deg, #1F4D40, #0F3B2F, #051611); z-index: 9998;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .logo-svg {
+            width: 150px; height: 150px; fill: transparent; stroke: #C8A97E;
+            stroke-width: 1.5; stroke-dasharray: 600; stroke-dashoffset: 600;
+        }
+
+        .swiper-destacados { width: 100%; padding-top: 50px; padding-bottom: 120px; overflow: visible; }
+        .swiper-slide-art {
+            background-position: center; background-size: cover; width: 280px; height: 400px;
+            -webkit-box-reflect: below 5px linear-gradient(transparent, transparent, rgba(0,0,0,0.3));
+            transition: filter 0.5s ease; filter: grayscale(80%) brightness(0.5);
+        }
+        @media (min-width: 768px) { .swiper-slide-art { width: 450px; height: 600px; } }
+        .swiper-slide-active { filter: grayscale(0%) brightness(1); }
+        .art-info { position: absolute; bottom: -90px; left: 0; width: 100%; text-align: center; opacity: 0; transform: translateY(20px); transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
+        .swiper-slide-active .art-info { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+
+        .swiper-archivo { width: 100%; padding-top: 50px; padding-bottom: 50px; overflow: hidden; }
+        .swiper-slide-archivo { width: 320px; height: auto; position: relative; transition: all 0.5s ease; display: flex; flex-direction: column; align-items: center; }
+        @media (min-width: 768px) { .swiper-slide-archivo { width: 400px; } }
+        
+        .marco-cuadro {
+            position: relative; width: 100%; height: 400px; border: 20px solid #333; box-sizing: border-box;
+            box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0,0,0,0.6), 0 0 15px rgba(220, 195, 150, 0.4);
+            border-image: linear-gradient(to bottom right, #e8d0a9, #c8a97e, #b89766, #d8c09a) 1; background: #1a1a1a; padding: 15px;
+        }
+        .marco-cuadro::before {
+            content: ''; position: absolute; top: 10px; right: 10px; bottom: 10px; left: 10px;
+            border: 2px solid rgba(200, 169, 126, 0.6); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
+        }
+        @media (min-width: 768px) { .marco-cuadro { height: 500px; border-width: 25px; padding: 20px; } .marco-cuadro::before { top: 15px; right: 15px; bottom: 15px; left: 15px; } }
+        .marco-cuadro img { width: 100%; height: 100%; object-fit: cover; display: block; box-shadow: 0 0 10px rgba(0,0,0,0.9); filter: brightness(0.8) contrast(1.1); transition: filter 0.8s ease, transform 1s ease; }
+        .swiper-slide-active .marco-cuadro img { filter: brightness(1) contrast(1.1); }
+
+        .archivo-info-elegante { margin-top: 30px; text-align: center; width: 100%; opacity: 0.5; transform: translateY(10px) translateZ(30px); transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
+        @keyframes textGlow { 0% { text-shadow: 0 0 5px rgba(200, 169, 126, 0.2), 0 0 10px rgba(200, 169, 126, 0.2); } 50% { text-shadow: 0 0 10px rgba(200, 169, 126, 0.6), 0 0 20px rgba(200, 169, 126, 0.4), 0 0 30px rgba(200, 169, 126, 0.2); } 100% { text-shadow: 0 0 5px rgba(200, 169, 126, 0.2), 0 0 10px rgba(200, 169, 126, 0.2); } }
+        .glow-text { animation: textGlow 3s ease-in-out infinite; }
+        .swiper-slide-active .archivo-info-elegante { opacity: 1; transform: translateY(0) translateZ(30px); transition-delay: 0.2s; }
+        .archivo-info-elegante h3 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: #EAE5DF; margin-bottom: 5px; letter-spacing: 0.05em; }
+        .archivo-info-elegante .autor { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #C8A97E; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 15px; }
+        .archivo-info-elegante .desc { font-family: 'Inter', sans-serif; font-size: 0.85rem; color: rgba(234, 229, 223, 0.7); line-height: 1.6; font-style: italic; max-width: 90%; margin: 0 auto 15px auto; }
+        .archivo-info-elegante .meta { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(234, 229, 223, 0.4); text-transform: uppercase; letter-spacing: 0.2em; display: flex; justify-content: center; gap: 15px; }
+
+        .perspective-container { perspective: 1500px; }
+        .exhibition-card { position: sticky; top: 15vh; will-change: transform, opacity; }
+        .about-card { will-change: transform, opacity, filter; transform-style: preserve-3d; }
+        .mirror-reflect { -webkit-box-reflect: below 10px linear-gradient(transparent, transparent, rgba(0,0,0,0.2)); }
+        .exhibition-inner { transform-style: preserve-3d; will-change: transform; }
+        .exhibition-img { transform: translateZ(-50px) scale(1.1); }
+        .exhibition-content { transform: translateZ(80px); }
+
+        .brush-container { position: relative; cursor: crosshair; }
+        .brush-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; touch-action: none; }
+
+        .ruleta-bg-container { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+        .ruleta-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.6) grayscale(30%); transition: opacity 1s ease; }
+        .ruleta-bg-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(31, 77, 64, 0.8), rgba(15, 59, 47, 0.9), rgba(5, 22, 17, 0.95)); mix-blend-mode: multiply; }
+        .swiper-ruleta { width: 100%; height: 100vh; padding-top: 35vh; padding-bottom: 10vh; z-index: 10; }
+        @media (min-width: 768px) { .swiper-ruleta { padding-top: 20vh; padding-bottom: 20vh; } }
+        .swiper-slide-ruleta { width: 220px; height: 320px; background-color: #EAE5DF; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1); filter: brightness(0.4) blur(4px); border: 1px solid rgba(200, 169, 126, 0.1); transform: scale(0.9); }
+        @media (min-width: 768px) { .swiper-slide-ruleta { width: 280px; height: 400px; } }
+        .swiper-slide-ruleta-active { filter: brightness(1) blur(0px); border-color: rgba(200, 169, 126, 0.6); transform: scale(1); box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7); }
+        .swiper-slide-ruleta-active .ruleta-img-wrapper img { transform: scale(1.05); }
+        .ruleta-img-wrapper { height: 75%; overflow: hidden; position: relative; }
+        .ruleta-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease; }
+        .ruleta-info { height: 25%; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; background-color: #0F3B2F; color: #EAE5DF; text-align: center; }
+
+        .panorama-section { position: relative; width: 100%; height: 100vh; overflow: hidden; background: linear-gradient(to bottom, #051611, #1F4D40 50%, #051611); display: flex; align-items: center; justify-content: center; perspective: 1800px; }
+        .panorama-ring-wrapper { perspective: 1800px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: absolute; z-index: 10; cursor: grab; }
+        .panorama-ring-wrapper:active { cursor: grabbing; }
+        .panorama-ring { position: relative; width: 280px; height: 180px; transform-style: preserve-3d; transition: transform 0.1s; transform-origin: center center; }
+        @media (min-width: 768px) { .panorama-ring { width: 450px; height: 280px; } }
+        .panorama-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-style: preserve-3d; -webkit-box-reflect: below 15px linear-gradient(transparent 10%, rgba(0,0,0,0.8)); backface-visibility: hidden; }
+        .panorama-card-inner { width: 100%; height: 100%; position: relative; border: 2px solid rgba(200, 169, 126, 0.3); box-shadow: 0 0 20px rgba(200, 169, 126, 0.1), inset 0 0 30px rgba(0,0,0,0.8); overflow: hidden; background-color: #051611; border-radius: 4px; }
+        .panorama-card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7) contrast(1.1); transition: filter 0.5s ease, transform 0.5s ease; }
+        .panorama-card:hover .panorama-card-inner img { filter: brightness(1.2) contrast(1.1); transform: scale(1.05); }
+        .panorama-card:hover .panorama-card-inner { border-color: rgba(200, 169, 126, 0.8); box-shadow: 0 0 30px rgba(200, 169, 126, 0.4), inset 0 0 30px rgba(0,0,0,0.8); }
+        .panorama-title { position: absolute; top: -35px; left: 0; width: 100%; text-align: center; color: #C8A97E; font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; text-shadow: 0 0 10px rgba(200,169,126,0.5); opacity: 0.7; transition: opacity 0.5s; pointer-events: none; }
+        .panorama-card:hover .panorama-title { opacity: 1; text-shadow: 0 0 15px rgba(200,169,126,0.9); }
+        .panorama-floor { position: absolute; bottom: 0; left: 0; width: 100%; height: 35vh; background: linear-gradient(to top, #051611 10%, rgba(5,22,17,0.8) 50%, transparent); z-index: 20; pointer-events: none; }
+        .panorama-floor::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(200,169,126,0.03) 2px, rgba(200,169,126,0.03) 4px); background-size: 100% 200%; animation: moveFloor 20s linear infinite; opacity: 0.3; }
+        @keyframes moveFloor { 0% { background-position: 0 0; } 100% { background-position: 0 100%; } }
+        .panorama-particles { position: absolute; inset: 0; z-index: 5; pointer-events: none; background-image: radial-gradient(circle at center, rgba(200,169,126,0.1) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.3; }
+        .panorama-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; background: radial-gradient(circle, rgba(200,169,126,0.2) 0%, transparent 70%); z-index: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="antialiased font-sans selection:bg-champagne selection:text-forest">
+
+    <div class="custom-cursor" id="cursor"></div>
+
+    <div id="preloader">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 10 L10 90 L30 90 L50 40 L70 90 L90 90 Z M35 70 L65 70" />
+            <text x="50" y="55" font-family="Cormorant Garamond" font-size="12" fill="#C8A97E" text-anchor="middle" stroke="none" opacity="0" id="logo-text">+ ART</text>
+        </svg>
+    </div>
+
+    <nav class="fixed top-0 w-full p-8 flex justify-between items-center z-50 mix-blend-difference text-beige">
+        <div class="font-serif text-2xl tracking-widest">+ART</div>
+        <div class="text-sm font-sans uppercase tracking-widest space-x-8 hidden md:block hover-target">
+            <a href="#lienzo" class="hover:text-champagne transition-colors">Interactivo</a>
+            <a href="#archivo" class="hover:text-champagne transition-colors">Archivo</a>
+            <a href="#destacados" class="hover:text-champagne transition-colors">Maestras</a>
+            <a href="#contacto" class="hover:text-champagne transition-colors">Contacto</a>
+        </div>
+    </nav>
+
+    <main id="smooth-wrapper">
+        <div id="smooth-content">
+
+            <section class="relative h-screen flex flex-col justify-center items-center overflow-hidden px-4 pt-20">
+                <div class="absolute inset-0 z-0 opacity-20">
+                    <img src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?q=80&w=2000&auto=format&fit=crop" alt="Fondo" class="w-full h-full object-cover grayscale" fetchpriority="high">
+                </div>
+                <div class="z-10 text-center">
+                    <h1 class="font-serif text-6xl md:text-9xl text-forest tracking-tighter leading-none title-anim overflow-hidden">
+                        <span class="block translate-y-[100%]">El Arte</span>
+                    </h1>
+                    <h1 class="font-serif text-6xl md:text-9xl text-forest tracking-tighter leading-none title-anim overflow-hidden italic pl-12 md:pl-32">
+                        <span class="block translate-y-[100%]">del Espacio</span>
+                    </h1>
+                    <p class="mt-8 text-elegant font-sans text-sm md:text-base tracking-widest uppercase max-w-md mx-auto fade-anim opacity-0">
+                        Una galería contemporánea donde la forma y el vacío coexisten en perfecta armonía.
+                    </p>
+                </div>
+                
+                <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center fade-anim opacity-0">
+                    <span class="text-xs uppercase tracking-widest mb-2 text-elegant">Descubrir</span>
+                    <div class="w-[1px] h-12 bg-forest overflow-hidden">
+                        <div class="w-full h-full bg-champagne translate-y-[-100%] anim-line"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-32 px-8 md:px-24 max-w-screen-2xl mx-auto flex flex-col md:flex-row items-center gap-16">
+                <div class="w-full md:w-1/2">
+                    <h2 class="font-serif text-4xl md:text-6xl text-forest mb-8 reveal-text">
+                        Nuestra filosofía reside en el silencio visual.
+                    </h2>
+                    <p class="text-elegant font-sans text-lg font-light leading-relaxed reveal-text">
+                        En +Art Studio, curamos experiencias, no solo objetos. Cada pieza seleccionada dialoga con el espacio que habita. Buscamos artistas que dominen el equilibrio entre la brutalidad de la textura y la delicadeza de la luz.
+                    </p>
+                </div>
+                <div class="w-full md:w-1/2 relative h-[600px] img-wrap parallax-container">
+                    <img src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop" alt="Arte" class="parallax-img" loading="lazy" decoding="async">
+                </div>
+            </section>
+
+            <section id="about-studio" class="relative w-full h-screen bg-gradient-to-br from-emerald via-forest to-[#051611] text-beige overflow-hidden flex items-center justify-center py-24 md:py-20 px-4 md:px-24 perspective-container">
+                <div class="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-4 md:gap-16 relative h-full">
+
+                    <div class="w-full md:w-1/2 relative h-[45vh] md:h-[70vh] flex items-center z-10 about-texts mt-8 md:mt-0">
+                        <div class="absolute inset-0 flex flex-col justify-center about-text-item about-text-1">
+                            <p class="font-sans text-champagne text-[10px] md:text-xs tracking-[0.4em] uppercase mb-2 md:mb-4">La Esencia</p>
+                            <h2 class="font-serif text-4xl md:text-7xl text-white mb-4 md:mb-6 leading-tight">¿Qué es <span class="italic text-champagne glow-text">+Art Studio?</span></h2>
+                            <p class="font-sans text-white/80 text-sm md:text-xl font-light leading-relaxed">
+                                Somos más que una galería; somos un santuario para el arte contemporáneo. Un espacio curado donde la vanguardia estética se encuentra con la tradición técnica. +Art Studio nace con el propósito de redefinir la relación entre el espectador y la obra.
+                            </p>
+                        </div>
+                        <div class="absolute inset-0 flex flex-col justify-center about-text-item about-text-2 opacity-0 translate-y-10">
+                            <p class="font-sans text-champagne text-[10px] md:text-xs tracking-[0.4em] uppercase mb-2 md:mb-4">Nuestro Criterio</p>
+                            <h2 class="font-serif text-4xl md:text-7xl text-white mb-4 md:mb-6 leading-tight">Curaduría de <span class="italic text-champagne glow-text">Excelencia</span></h2>
+                            <p class="font-sans text-white/80 text-sm md:text-xl font-light leading-relaxed">
+                                Lo que nos hace verdaderamente especiales es nuestra implacable búsqueda de la calidad. Seleccionamos rigurosamente cada pieza, no por su valor comercial, sino por su capacidad de conmover, desafiar e inspirar. Representamos artistas que dominan el silencio visual.
+                            </p>
+                        </div>
+                        <div class="absolute inset-0 flex flex-col justify-center about-text-item about-text-3 opacity-0 translate-y-10">
+                            <p class="font-sans text-champagne text-[10px] md:text-xs tracking-[0.4em] uppercase mb-2 md:mb-4">La Experiencia</p>
+                            <h2 class="font-serif text-4xl md:text-7xl text-white mb-4 md:mb-6 leading-tight">El Arte de <span class="italic text-champagne glow-text">Coleccionar</span></h2>
+                            <p class="font-sans text-white/80 text-sm md:text-xl font-light leading-relaxed">
+                                Brindamos una asesoría íntima y personalizada. Entendemos que adquirir arte es un acto profundamente personal. En +Art Studio, te guiamos en el descubrimiento de piezas que no solo enriquecen tus espacios, sino que se convierten en parte de tu legado.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="w-full md:w-1/2 h-[45vh] md:h-[70vh] relative perspective-container z-20 about-cards-container mb-8 md:mb-0">
+                        <div class="about-card about-card-3 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] md:w-[500px] h-[220px] md:h-[320px] bg-beige p-3 md:p-4 rounded-xl shadow-2xl border border-black/5 flex flex-col items-center gap-4 mirror-reflect">
+                            <div class="w-full h-[120px] md:h-[180px] relative overflow-hidden rounded-lg">
+                                <img src="https://images.unsplash.com/photo-1536924940846-227afb31e2a5?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover" alt="Obra 3">
+                            </div>
+                            <div class="w-full text-center">
+                                <h3 class="font-serif text-lg md:text-3xl text-forest">Síntesis</h3>
+                                <p class="font-sans text-[10px] md:text-xs text-elegant tracking-widest uppercase mt-1 md:mt-2">Carbón sobre papel</p>
+                            </div>
+                        </div>
+
+                        <div class="about-card about-card-2 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] md:w-[500px] h-[220px] md:h-[320px] bg-beige p-3 md:p-4 rounded-xl shadow-2xl border border-black/5 flex flex-col items-center gap-4 mirror-reflect">
+                            <div class="w-full h-[120px] md:h-[180px] relative overflow-hidden rounded-lg">
+                                <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover" alt="Obra 2">
+                            </div>
+                            <div class="w-full text-center">
+                                <h3 class="font-serif text-lg md:text-3xl text-forest">Dualidad</h3>
+                                <p class="font-sans text-[10px] md:text-xs text-elegant tracking-widest uppercase mt-1 md:mt-2">Óleo e hilos</p>
+                            </div>
+                        </div>
+
+                        <div class="about-card about-card-1 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] md:w-[500px] h-[220px] md:h-[320px] bg-beige p-3 md:p-4 rounded-xl shadow-2xl border border-black/5 flex flex-col items-center gap-4 mirror-reflect">
+                            <div class="w-full h-[120px] md:h-[180px] relative overflow-hidden rounded-lg">
+                                <img src="https://images.unsplash.com/photo-1536924940846-227afb31e2a5?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover" alt="Obra 1">
+                            </div>
+                            <div class="w-full text-center">
+                                <h3 class="font-serif text-lg md:text-3xl text-forest">Perspectiva</h3>
+                                <p class="font-sans text-[10px] md:text-xs text-elegant tracking-widest uppercase mt-1 md:mt-2">Acrílico sobre lienzo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <section id="lienzo" class="relative w-full h-[80vh] bg-beige px-4 md:px-24 py-16 flex flex-col items-center">
+                <div class="text-center z-10 relative mb-12">
+                    <p class="font-sans text-forest text-xs tracking-[0.4em] uppercase reveal-text">Experiencia Táctil</p>
+                    <h2 class="font-serif text-4xl md:text-6xl text-forest reveal-text mt-2">Revela la Obra</h2>
+                </div>
+
+                <div class="w-full max-w-5xl h-full relative rounded-2xl overflow-hidden shadow-2xl brush-container cursor-swiper" id="brush-wrapper">
+                    <img src="https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1600&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover z-0" alt="Obra Maestra" loading="lazy" decoding="async">
+                    <div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none" id="brush-hint">
+                        <h3 class="font-serif text-4xl text-champagne italic opacity-50 mix-blend-difference">Pasa el cursor o el dedo aquí</h3>
+                    </div>
+                    <canvas id="brushCanvas" class="brush-canvas"></canvas>
+                </div>
+            </section>
+
+            <section id="exploracion-3d" class="relative w-full h-screen overflow-hidden bg-[radial-gradient(circle_at_center,#1e704e_0%,#052c1e_100%)] flex items-center justify-center">
+                
+                <button id="btn-close-3d" class="absolute top-24 md:top-8 left-8 z-40 px-6 py-2 rounded-full border border-white/20 bg-black/50 text-white flex items-center gap-2 hover:bg-white hover:text-black transition-all opacity-0 pointer-events-none cursor-pointer font-sans text-xs tracking-widest uppercase">
+                    <i class="ph ph-arrow-left text-lg"></i> Volver al recorrido
+                </button>
+
+                <div id="info-3d" class="absolute top-24 md:top-1/2 right-8 md:right-24 md:-translate-y-1/2 w-[320px] p-8 bg-black/40 backdrop-blur-xl border border-champagne/20 rounded-2xl z-20 pointer-events-none shadow-2xl transition-opacity duration-500">
+                    <p class="font-sans text-champagne text-[10px] tracking-[0.4em] uppercase mb-2">Inmersión WebGL</p>
+                    <h3 class="font-serif text-3xl text-beige mb-1">Materia y Volumen</h3>
+                    <p class="font-sans text-sm text-white/60 mb-6">Estudio de Texturas</p>
+                    
+                    <div class="border-y border-white/10 py-4 mb-4 font-sans text-xs text-white/80 space-y-2">
+                        <p><strong class="text-champagne font-normal">Soporte:</strong> Lienzo en bastidor</p>
+                        <p><strong class="text-champagne font-normal">Técnica:</strong> Impasto y Relieve</p>
+                        <p><strong class="text-champagne font-normal">Iluminación:</strong> Hemisférica dinámica</p>
+                    </div>
+                    
+                    <p class="font-sans text-xs text-white/50 italic leading-relaxed">
+                        Activa el modo 3D para orbitar el lienzo en el espacio. Observa cómo la luz física resalta los detalles de la obra.
+                    </p>
+                </div>
+
+                <div id="btn-container-3d" class="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center transition-opacity duration-500">
+                    <button id="btn-activate-3d" class="px-8 py-4 rounded-full border border-champagne text-champagne bg-black/40 backdrop-blur-md hover:bg-champagne hover:text-forest transition-colors font-sans text-xs tracking-[0.2em] uppercase flex items-center gap-3 hover-target cursor-pointer shadow-[0_0_30px_rgba(200,169,126,0.15)]">
+                        <i class="ph ph-cube text-xl"></i> Activar Exploración 3D
+                    </button>
+                </div>
+
+                <div id="canvas-3d-container" class="absolute inset-0 w-full h-full z-10 pointer-events-none"></div>
+            </section>
+            <section id="archivo" class="py-32 bg-gradient-to-br from-emerald via-forest to-[#051611] text-beige overflow-hidden">
+                <div class="px-8 md:px-24 mb-16 flex justify-between items-end">
+                    <h2 class="font-serif text-5xl md:text-7xl">Colección<br><span class="italic text-champagne">Permanente</span></h2>
+                    <p class="font-sans text-sm tracking-widest uppercase hidden md:block">Desliza para explorar</p>
+                </div>
+
+                <div class="swiper swiper-archivo cursor-swiper mt-12 pb-16">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide swiper-slide-archivo">
+                            <div class="marco-cuadro">
+                                <img src="https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=800&auto=format&fit=crop" alt="Materia Oscura" loading="lazy" decoding="async">
+                            </div>
+                            <div class="archivo-info-elegante">
+                                <h3>Materia Oscura</h3>
+                                <div class="autor">Elena Vals</div>
+                                <p class="desc">"El vacío no es la ausencia de algo, sino la presencia potencial de todo."</p>
+                                <div class="meta">
+                                    <span>Óleo sobre lienzo</span>
+                                    <span>120 x 180 cm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="swiper-slide swiper-slide-archivo">
+                            <div class="marco-cuadro">
+                                <img src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop" alt="Eco de Luz" loading="lazy" decoding="async">
+                            </div>
+                            <div class="archivo-info-elegante">
+                                <h3>Eco de Luz</h3>
+                                <div class="autor">Marco Rossi</div>
+                                <p class="desc">"La luz que se refracta en la memoria perdura más allá del tiempo visible."</p>
+                                <div class="meta">
+                                    <span>Acrílico y resina</span>
+                                    <span>90 x 90 cm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="swiper-slide swiper-slide-archivo">
+                            <div class="marco-cuadro">
+                                <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=800&auto=format&fit=crop" alt="Líneas de Éter" loading="lazy" decoding="async">
+                            </div>
+                            <div class="archivo-info-elegante">
+                                <h3>Líneas de Éter</h3>
+                                <div class="autor">Sarah Jin</div>
+                                <p class="desc">"Trazar una línea es separar el infinito en dos mitades complementarias."</p>
+                                <div class="meta">
+                                    <span>Carbón y grafito</span>
+                                    <span>150 x 200 cm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="swiper-slide swiper-slide-archivo">
+                            <div class="marco-cuadro">
+                                <img src="https://images.unsplash.com/photo-1583088580009-2d947c3e90a6?q=80&w=800&auto=format&fit=crop" alt="Fluido Dorado" loading="lazy" decoding="async">
+                            </div>
+                            <div class="archivo-info-elegante">
+                                <h3>Fluido Dorado</h3>
+                                <div class="autor">David Chen</div>
+                                <p class="desc">"La transformación de la materia es el alquimia visual de nuestro siglo."</p>
+                                <div class="meta">
+                                    <span>Pigmentos mixtos con pan de oro</span>
+                                    <span>100 x 120 cm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="swiper-slide swiper-slide-archivo">
+                            <div class="marco-cuadro">
+                                <img src="https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=800&auto=format&fit=crop" alt="Pigmento Crudo" loading="lazy" decoding="async">
+                            </div>
+                            <div class="archivo-info-elegante">
+                                <h3>Pigmento Crudo</h3>
+                                <div class="autor">Ana Silva</div>
+                                <p class="desc">"Regresar al origen del color es despojarse de la interpretación moderna."</p>
+                                <div class="meta">
+                                    <span>Tierras naturales sobre lino</span>
+                                    <span>140 x 140 cm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-pagination mt-8 relative"></div>
+                </div>
+            </section>
+
+            <section id="destacados" class="relative py-32 bg-gradient-to-b from-[#051611] to-[#0a2820] overflow-hidden">
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-champagne rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+
+                <div class="text-center z-10 relative mb-16 px-4">
+                    <p class="font-sans text-champagne text-xs tracking-[0.3em] uppercase mb-4 reveal-text">Exhibición Privada</p>
+                    <h2 class="font-serif text-5xl md:text-7xl text-beige reveal-text">Obras Maestras 3D</h2>
+                </div>
+
+                <div class="swiper swiper-destacados cursor-swiper">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide swiper-slide-art shadow-2xl" style="background-image: url('https://images.unsplash.com/photo-1543857778-c4a1a3e0b2eb?q=80&w=800&auto=format&fit=crop');">
+                            <div class="art-info">
+                                <h3 class="font-serif text-3xl text-champagne">Génesis Verde</h3>
+                                <p class="font-sans text-xs tracking-widest text-beige mt-2 uppercase">Acrílico sobre lienzo</p>
+                            </div>
+                        </div>
+                        <div class="swiper-slide swiper-slide-art shadow-2xl" style="background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop');">
+                            <div class="art-info">
+                                <h3 class="font-serif text-3xl text-champagne">Textura Abisal</h3>
+                                <p class="font-sans text-xs tracking-widest text-beige mt-2 uppercase">Óleo e hilos de oro</p>
+                            </div>
+                        </div>
+                        <div class="swiper-slide swiper-slide-art shadow-2xl" style="background-image: url('https://images.unsplash.com/photo-1579783483458-83d02161294e?q=80&w=800&auto=format&fit=crop');">
+                            <div class="art-info">
+                                <h3 class="font-serif text-3xl text-champagne">Silencio Áureo</h3>
+                                <p class="font-sans text-xs tracking-widest text-beige mt-2 uppercase">Técnica mixta</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ruleta" class="relative w-full h-screen overflow-hidden flex items-center bg-gradient-to-br from-emerald via-forest to-[#051611]">
+                <div class="ruleta-bg-container" id="ruleta-bg-container">
+                </div>
+                <div class="ruleta-bg-overlay"></div>
+
+                <div class="absolute top-16 left-8 md:left-24 z-20 pointer-events-none">
+                    <p class="font-sans text-champagne text-xs tracking-[0.3em] uppercase mb-4">Colección Rotativa</p>
+                    <h2 class="font-serif text-5xl md:text-7xl text-beige overflow-hidden">
+                        <span class="block translate-y-[100%] ruleta-title-anim" id="ruleta-title">Obra Principal</span>
+                    </h2>
+                    <p class="font-sans text-sm tracking-widest text-champagne mt-4 uppercase opacity-0 ruleta-author-anim" id="ruleta-author">Autor Desconocido</p>
+                </div>
+
+                <div class="w-full md:w-1/2 ml-auto h-full relative z-10 flex items-center justify-center">
+                    <div class="swiper swiper-ruleta cursor-swiper">
+                        <div class="swiper-wrapper" id="ruleta-wrapper">
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute bottom-16 left-8 md:left-24 z-20 flex gap-4">
+                    <button class="w-12 h-12 rounded-full border border-champagne text-champagne flex items-center justify-center hover:bg-champagne hover:text-forest transition-colors hover-target ruleta-prev pointer-events-auto cursor-pointer relative z-30">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button class="w-12 h-12 rounded-full border border-champagne text-champagne flex items-center justify-center hover:bg-champagne hover:text-forest transition-colors hover-target ruleta-next pointer-events-auto cursor-pointer relative z-30">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </section>
+
+            <section id="panorama" class="panorama-section">
+                <div class="panorama-particles"></div>
+                <div class="panorama-glow"></div>
+
+                <div class="absolute top-16 md:top-24 w-full text-center z-30 pointer-events-none">
+                    <p class="font-sans text-champagne text-xs tracking-[0.4em] uppercase mb-4 reveal-text">Experiencia Inmersiva</p>
+                    <h2 class="font-serif text-5xl md:text-7xl text-beige reveal-text">Salón de la <span class="italic text-champagne glow-text">Luz</span></h2>
+                </div>
+
+                <div class="panorama-ring-wrapper" id="panorama-container">
+                    <div class="panorama-ring" id="panorama-ring">
+                    </div>
+                </div>
+
+                <div class="panorama-floor"></div>
+
+                <div class="absolute bottom-8 w-full text-center z-30 pointer-events-none">
+                    <p class="font-sans text-champagne text-xs tracking-[0.2em] uppercase opacity-70 flex items-center justify-center gap-4">
+                        <i class="ph ph-arrows-down-up text-lg"></i>
+                        Desliza hacia abajo para rotar
+                    </p>
+                </div>
+            </section>
+
+            <section class="relative py-32 bg-beige text-forest perspective-container overflow-hidden">
+                <div class="text-center z-10 relative mb-24 px-4">
+                    <p class="font-sans text-champagne text-xs tracking-[0.3em] uppercase mb-4 reveal-text">Trayectoria</p>
+                    <h2 class="font-serif text-5xl md:text-7xl text-forest reveal-text">Exposiciones</h2>
+                </div>
+
+                <div class="max-w-5xl mx-auto px-4 relative pb-[10vh]">
+                    <div class="exhibition-card mb-[10vh]">
+                        <div class="exhibition-inner w-full h-[60vh] md:h-[70vh] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#1a1a1a] to-[#050505] relative flex flex-col justify-end p-8 md:p-16 hover-target cursor-gallery">
+                            <img src="https://images.unsplash.com/photo-1577083552431-6e5fd01988ec?q=80&w=1200&auto=format&fit=crop" alt="Bienal" class="absolute inset-0 w-full h-full object-cover opacity-60 exhibition-img" loading="lazy" decoding="async">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                            <div class="relative z-10 exhibition-content text-beige">
+                                <span class="text-champagne font-serif text-4xl md:text-6xl italic">2026</span>
+                                <h3 class="font-sans text-2xl md:text-4xl font-light mt-2 tracking-widest">Bienal de Venecia</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="exhibition-card">
+                        <div class="exhibition-inner w-full h-[60vh] md:h-[70vh] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#1a1a1a] to-[#050505] relative flex flex-col justify-end p-8 md:p-16 hover-target cursor-gallery">
+                            <img src="https://images.unsplash.com/photo-1561214115-f1f11538638b?q=80&w=1200&auto=format&fit=crop" alt="MoMA" class="absolute inset-0 w-full h-full object-cover opacity-60 exhibition-img" loading="lazy" decoding="async">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                            <div class="relative z-10 exhibition-content text-beige">
+                                <span class="text-champagne font-serif text-4xl md:text-6xl italic">2025</span>
+                                <h3 class="font-sans text-2xl md:text-4xl font-light mt-2 tracking-widest">MoMA, New York</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="servicios" class="relative py-32 bg-gradient-to-br from-emerald via-forest to-[#051611] text-beige overflow-hidden">
+                <div class="text-center z-10 relative mb-20 px-4">
+                    <p class="font-sans text-champagne text-xs tracking-[0.4em] uppercase mb-4 reveal-text">Exclusividad & Maestría</p>
+                    <h2 class="font-serif text-5xl md:text-7xl text-white reveal-text mb-6">Nuestros Servicios Premium</h2>
+                    <p class="font-sans text-white/80 max-w-2xl mx-auto font-light leading-relaxed">Elevamos el arte a su máxima expresión. Ofrecemos soluciones artísticas de élite, diseñadas a medida para coleccionistas, espacios de lujo y amantes del buen gusto.</p>
+                </div>
+
+                <div class="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 relative z-10">
+                    <div class="group relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all duration-500 hover:border-champagne/50 hover:shadow-[0_0_40px_rgba(200,169,126,0.15)] cursor-pointer">
+                        <div class="p-10 flex flex-col h-full relative z-10">
+                            <div class="w-16 h-16 rounded-full bg-champagne/10 flex items-center justify-center mb-8 group-hover:bg-champagne/20 transition-colors duration-500 border border-champagne/30">
+                                <i class="ph ph-paint-brush-broad text-3xl text-champagne"></i>
+                            </div>
+                            <h3 class="font-serif text-3xl mb-4 text-white group-hover:text-champagne transition-colors duration-300">Retratos de Autor</h3>
+                            <p class="font-sans text-sm font-light text-white/70 leading-relaxed mb-6 flex-grow">Plasmar el alma humana requiere más que técnica; exige visión. Creamos retratos excepcionales que capturan la esencia del retratado, convirtiendo cada trazo en un legado atemporal.</p>
+                            <div class="flex items-center text-champagne font-sans text-xs tracking-widest uppercase mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span>Solicitar presupuesto</span>
+                                <i class="ph ph-arrow-right ml-2 transform group-hover:translate-x-2 transition-transform"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all duration-500 hover:border-champagne/50 hover:shadow-[0_0_40px_rgba(200,169,126,0.15)] cursor-pointer mt-0 md:mt-10 lg:mt-0">
+                        <div class="p-10 flex flex-col h-full relative z-10">
+                            <div class="w-16 h-16 rounded-full bg-champagne/10 flex items-center justify-center mb-8 group-hover:bg-champagne/20 transition-colors duration-500 border border-champagne/30">
+                                <i class="ph ph-palette text-3xl text-champagne"></i>
+                            </div>
+                            <h3 class="font-serif text-3xl mb-4 text-white group-hover:text-champagne transition-colors duration-300">Obras por Encargo</h3>
+                            <p class="font-sans text-sm font-light text-white/70 leading-relaxed mb-6 flex-grow">Concebimos piezas únicas destinadas a ser el punto focal de espacios sofisticados. Una obra maestra creada exclusivamente para dialogar con su entorno y su sensibilidad.</p>
+                            <div class="flex items-center text-champagne font-sans text-xs tracking-widest uppercase mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span>Consultar viabilidad</span>
+                                <i class="ph ph-arrow-right ml-2 transform group-hover:translate-x-2 transition-transform"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all duration-500 hover:border-champagne/50 hover:shadow-[0_0_40px_rgba(200,169,126,0.15)] cursor-pointer">
+                        <div class="p-10 flex flex-col h-full relative z-10">
+                            <div class="w-16 h-16 rounded-full bg-champagne/10 flex items-center justify-center mb-8 group-hover:bg-champagne/20 transition-colors duration-500 border border-champagne/30">
+                                <i class="ph ph-chalkboard-teacher text-3xl text-champagne"></i>
+                            </div>
+                            <h3 class="font-serif text-3xl mb-4 text-white group-hover:text-champagne transition-colors duration-300">Clases Magistrales</h3>
+                            <p class="font-sans text-sm font-light text-white/70 leading-relaxed mb-6 flex-grow">Mentoría artística de élite. Compartimos secretos de estudio, técnicas clásicas y visión contemporánea en sesiones exclusivas diseñadas para elevar su potencial artístico.</p>
+                            <div class="flex items-center text-champagne font-sans text-xs tracking-widest uppercase mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span>Ver disponibilidad</span>
+                                <i class="ph ph-arrow-right ml-2 transform group-hover:translate-x-2 transition-transform"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all duration-500 hover:border-champagne/50 hover:shadow-[0_0_40px_rgba(200,169,126,0.15)] cursor-pointer lg:col-start-1 lg:col-end-2 lg:translate-x-[50%] md:mt-10 lg:mt-0">
+                        <div class="p-10 flex flex-col h-full relative z-10">
+                            <div class="w-16 h-16 rounded-full bg-champagne/10 flex items-center justify-center mb-8 group-hover:bg-champagne/20 transition-colors duration-500 border border-champagne/30">
+                                <i class="ph ph-magic-wand text-3xl text-champagne"></i>
+                            </div>
+                            <h3 class="font-serif text-3xl mb-4 text-white group-hover:text-champagne transition-colors duration-300">Restauración Fina</h3>
+                            <p class="font-sans text-sm font-light text-white/70 leading-relaxed mb-6 flex-grow">Preservamos el patrimonio artístico con rigor científico y sensibilidad histórica. Devolvemos el esplendor a obras clásicas garantizando su conservación para generaciones futuras.</p>
+                            <div class="flex items-center text-champagne font-sans text-xs tracking-widest uppercase mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span>Agendar evaluación</span>
+                                <i class="ph ph-arrow-right ml-2 transform group-hover:translate-x-2 transition-transform"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all duration-500 hover:border-champagne/50 hover:shadow-[0_0_40px_rgba(200,169,126,0.15)] cursor-pointer lg:col-start-2 lg:col-end-3 lg:translate-x-[50%] mt-0 md:mt-10 lg:mt-0">
+                        <div class="p-10 flex flex-col h-full relative z-10">
+                            <div class="w-16 h-16 rounded-full bg-champagne/10 flex items-center justify-center mb-8 group-hover:bg-champagne/20 transition-colors duration-500 border border-champagne/30">
+                                <i class="ph ph-users-three text-3xl text-champagne"></i>
+                            </div>
+                            <h3 class="font-serif text-3xl mb-4 text-white group-hover:text-champagne transition-colors duration-300">Retiros Artísticos</h3>
+                            <p class="font-sans text-sm font-light text-white/70 leading-relaxed mb-6 flex-grow">Experiencias inmersivas premium donde la creatividad fluye en entornos inspiradores. Retiros diseñados para reconectar con el arte, el lujo y la inspiración más profunda.</p>
+                            <div class="flex items-center text-champagne font-sans text-xs tracking-widest uppercase mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span>Descubrir próximos retiros</span>
+                                <i class="ph ph-arrow-right ml-2 transform group-hover:translate-x-2 transition-transform"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contacto" class="py-32 px-8 md:px-24 bg-gradient-to-b from-[#051611] to-[#0a2820] text-beige relative overflow-hidden">
+                <div class="max-w-4xl mx-auto text-center z-10 relative">
+                    <h2 class="font-serif text-4xl md:text-6xl mb-12">Adquiere o comisiona una obra.</h2>
+                    <form class="flex flex-col gap-8 max-w-xl mx-auto font-sans">
+                        <input type="text" placeholder="Tu Nombre" class="bg-transparent border-b border-champagne/30 pb-4 focus:outline-none focus:border-champagne transition-colors text-beige placeholder-champagne/50 text-sm tracking-widest">
+                        <input type="email" placeholder="Tu Email" class="bg-transparent border-b border-champagne/30 pb-4 focus:outline-none focus:border-champagne transition-colors text-beige placeholder-champagne/50 text-sm tracking-widest">
+                        <button type="submit" class="self-center mt-8 font-serif text-2xl italic hover:text-champagne transition-colors flex items-center gap-4 hover-target">
+                            Enviar Mensaje <i class="ph ph-arrow-right text-champagne ml-2"></i>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <footer class="bg-gradient-to-br from-[#0a2820] via-[#051611] to-[#051611] text-beige pt-20 pb-10 border-t border-champagne/20 relative overflow-hidden">
+                <div class="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+                        <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                            <a href="#" class="font-serif text-3xl tracking-wider text-champagne mb-6 inline-block">+Art<span class="font-sans text-xl font-light tracking-widest ml-2 text-white/80">STUDIO</span></a>
+                            <p class="font-sans text-sm font-light text-white/60 leading-relaxed mb-8">Elevando el arte contemporáneo a través de la exclusividad, la maestría técnica y una visión estética sin compromisos.</p>
+                            <div class="flex space-x-4">
+                                <a href="#" class="w-10 h-10 rounded-full border border-champagne/30 flex items-center justify-center text-champagne hover:bg-champagne hover:text-forest transition-colors duration-300">
+                                    <i class="ph ph-instagram-logo text-lg"></i>
+                                </a>
+                                <a href="#" class="w-10 h-10 rounded-full border border-champagne/30 flex items-center justify-center text-champagne hover:bg-champagne hover:text-forest transition-colors duration-300">
+                                    <i class="ph ph-pinterest-logo text-lg"></i>
+                                </a>
+                                <a href="#" class="w-10 h-10 rounded-full border border-champagne/30 flex items-center justify-center text-champagne hover:bg-champagne hover:text-forest transition-colors duration-300">
+                                    <i class="ph ph-twitter-logo text-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-sans text-xs tracking-[0.2em] uppercase text-champagne mb-6 font-medium">Explorar</h4>
+                            <ul class="space-y-3 font-sans text-sm font-light text-white/70">
+                                <li><a href="#galeria" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Galería Exclusiva</a></li>
+                                <li><a href="#exposiciones" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Exposiciones</a></li>
+                                <li><a href="#archivo" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Colección Privada</a></li>
+                                <li><a href="#servicios" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Servicios Premium</a></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-sans text-xs tracking-[0.2em] uppercase text-champagne mb-6 font-medium">Especialidades</h4>
+                            <ul class="space-y-3 font-sans text-sm font-light text-white/70">
+                                <li><a href="#" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Retratos de Autor</a></li>
+                                <li><a href="#" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Obras por Encargo</a></li>
+                                <li><a href="#" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Restauración Fina</a></li>
+                                <li><a href="#" class="hover:text-champagne transition-colors duration-300 flex items-center"><i class="ph ph-caret-right mr-2 text-champagne/50"></i>Asesoría de Arte</a></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-sans text-xs tracking-[0.2em] uppercase text-champagne mb-6 font-medium">Contacto</h4>
+                            <ul class="space-y-4 font-sans text-sm font-light text-white/70">
+                                <li class="flex items-start">
+                                    <i class="ph ph-map-pin text-champagne mt-1 mr-3 text-lg"></i>
+                                    <span>Popayán, Cauca<br>Colombia</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="ph ph-phone text-champagne mr-3 text-lg"></i>
+                                    <a href="tel:+573000000000" class="hover:text-champagne transition-colors duration-300">+57 300 000 0000</a>
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="ph ph-envelope-simple text-champagne mr-3 text-lg"></i>
+                                    <a href="mailto:info@artstudiocol.com" class="hover:text-champagne transition-colors duration-300">info@artstudiocol.com</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center font-sans text-xs font-light text-white/50">
+                        <p>&copy; 2024 +Art Studio. Todos los derechos reservados.</p>
+                        <div class="flex space-x-6 mt-4 md:mt-0">
+                            <a href="#" class="hover:text-champagne transition-colors duration-300">Aviso Legal</a>
+                            <a href="#" class="hover:text-champagne transition-colors duration-300">Política de Privacidad</a>
+                            <a href="#" class="hover:text-champagne transition-colors duration-300">Términos de Servicio</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute -bottom-10 left-0 w-full text-center opacity-5 pointer-events-none select-none z-0">
+                    <h1 class="font-serif text-[15vw] leading-none whitespace-nowrap">+ART STUDIO</h1>
+                </div>
+            </footer>
+
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 1. Lenis Smooth Scroll (Global)
+        const lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true });
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+        requestAnimationFrame(raf);
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add((time)=>{ lenis.raf(time * 1000); });
+        gsap.ticker.lagSmoothing(0);
+
+        // 2. Cursor Custom
+        const cursor = document.getElementById('cursor');
+        const root = document.documentElement;
+        document.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1, ease: "power2.out" });
+        });
+
+        const setupHover = (selector, text, scale) => {
+            document.querySelectorAll(selector).forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    if(text) { root.style.setProperty('--cursor-text', `"${text}"`); cursor.classList.add('cursor-hover'); }
+                    if(scale) gsap.to(cursor, {scale: scale, duration: 0.3});
+                });
+                item.addEventListener('mouseleave', () => {
+                    cursor.classList.remove('cursor-hover');
+                    if(scale) gsap.to(cursor, {scale: 1, duration: 0.3});
+                });
+            });
+        };
+        setupHover('.cursor-gallery', 'Ver', null);
+        setupHover('.cursor-swiper', 'Deslizar', null);
+        setupHover('.cursor-orbit', 'Orbitar', null);
+        setupHover('.hover-target:not(.cursor-gallery)', '', 1.5);
+
+        // 3. Preloader y Scroll Animaciones
+        window.addEventListener('load', () => {
+            const tl = gsap.timeline();
+            tl.to('.logo-svg', { strokeDashoffset: 0, duration: 2, ease: "power2.inOut" })
+              .to('#logo-text', { opacity: 1, duration: 1, ease: "power1.inOut" }, "-=0.5")
+              .to('#preloader', { yPercent: -100, duration: 1.2, ease: "expo.inOut", delay: 0.5 })
+              .to('.title-anim span', { y: 0, duration: 1.2, stagger: 0.2, ease: "power4.out" }, "-=0.5")
+              .to('.fade-anim', { opacity: 1, duration: 1, ease: "power2.out" }, "-=0.8");
+        });
+
+        document.querySelectorAll('.reveal-text').forEach(text => {
+            gsap.fromTo(text, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out", scrollTrigger: { trigger: text, start: "top 85%" } });
+        });
+
+        // 4. Swiper 3D
+        new Swiper('.swiper-destacados', { effect: 'coverflow', grabCursor: true, centeredSlides: true, slidesPerView: 'auto', loop: true, speed: 800, coverflowEffect: { rotate: 35, stretch: 0, depth: 250, modifier: 1, slideShadows: true }, autoplay: { delay: 4000, disableOnInteraction: false } });
+
+        new Swiper('.swiper-archivo', {
+            effect: 'coverflow', grabCursor: true, centeredSlides: true, slidesPerView: 'auto', loop: true, speed: 800,
+            coverflowEffect: { rotate: 0, stretch: 0, depth: 150, modifier: 1.5, slideShadows: true },
+            autoplay: { delay: 3500, disableOnInteraction: false },
+            pagination: { el: '.swiper-pagination', clickable: true },
+            breakpoints: { 768: { coverflowEffect: { rotate: 0, stretch: 0, depth: 200, modifier: 2, slideShadows: true } } }
+        });
+        
+        const exCards = gsap.utils.toArray('.exhibition-card');
+        exCards.forEach((card, i) => {
+            if (i === exCards.length - 1) return; 
+            gsap.to(card, { scale: 0.85, opacity: 0, rotationX: -15, transformOrigin: "top center", ease: "none", scrollTrigger: { trigger: exCards[i + 1], start: "top 80%", end: "top 20%", scrub: true } });
+        });
+
+        // 5. ABOUT STUDIO
+        const aboutTl = gsap.timeline({ scrollTrigger: { trigger: '#about-studio', start: "top top", end: "+=300%", pin: true, scrub: 1 } });
+        gsap.set('.about-card-1', { zIndex: 3, transform: 'translate(-50%, -50%) translateZ(0px) scale(1)', filter: 'brightness(1)' });
+        gsap.set('.about-card-2', { zIndex: 2, transform: 'translate(-50%, -50%) translateZ(-100px) translateY(-5%) scale(0.9)', filter: 'brightness(0.6)' });
+        gsap.set('.about-card-3', { zIndex: 1, transform: 'translate(-50%, -50%) translateZ(-200px) translateY(-10%) scale(0.8)', filter: 'brightness(0.3)' });
+
+        aboutTl.to('.about-text-1', { opacity: 0, y: -20, duration: 1 }, 0)
+               .to('.about-text-2', { opacity: 1, y: 0, duration: 1 }, 0)
+               .to('.about-card-1', { rotationY: 180, rotationZ: -10, scale: 0.8, opacity: 0, duration: 1.5, ease: "power2.inOut" }, 0)
+               .to('.about-card-2', { transform: 'translate(-50%, -50%) translateZ(0px) translateY(0%) scale(1)', filter: 'brightness(1)', duration: 1.5, ease: "power2.inOut" }, 0)
+               .to('.about-card-3', { transform: 'translate(-50%, -50%) translateZ(-100px) translateY(-5%) scale(0.9)', filter: 'brightness(0.6)', duration: 1.5, ease: "power2.inOut" }, 0);
+        aboutTl.to({}, {duration: 0.5});
+        aboutTl.to('.about-text-2', { opacity: 0, y: -20, duration: 1 })
+               .to('.about-text-3', { opacity: 1, y: 0, duration: 1 }, "<")
+               .to('.about-card-2', { rotationY: -180, rotationZ: 10, scale: 0.8, opacity: 0, duration: 1.5, ease: "power2.inOut" }, "<")
+               .to('.about-card-3', { transform: 'translate(-50%, -50%) translateZ(0px) translateY(0%) scale(1)', filter: 'brightness(1)', duration: 1.5, ease: "power2.inOut" }, "<");
+
+        // 6. RULETA 3D
+        const ruletaData = [
+            { id: 1, title: 'Geometría Rota', author: 'Elena Vals', image: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?q=80&w=800&auto=format&fit=crop', year: '2023' },
+            { id: 2, title: 'Azul Profundo', author: 'Marco Rossi', image: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=800&auto=format&fit=crop', year: '2021' },
+            { id: 3, title: 'Luz Fragmentada', author: 'Sarah Jin', image: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=800&auto=format&fit=crop', year: '2024' },
+            { id: 4, title: 'Caos Estructurado', author: 'David Chen', image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?q=80&w=800&auto=format&fit=crop', year: '2022' },
+            { id: 5, title: 'Sueño Etéreo', author: 'Ana Silva', image: 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?q=80&w=800&auto=format&fit=crop', year: '2023' }
+        ];
+
+        const ruletaWrapper = document.getElementById('ruleta-wrapper');
+        const ruletaBgContainer = document.getElementById('ruleta-bg-container');
+        const ruletaTitle = document.getElementById('ruleta-title');
+        const ruletaAuthor = document.getElementById('ruleta-author');
+
+        ruletaData.forEach((item, index) => {
+            const bgDiv = document.createElement('div');
+            bgDiv.className = 'ruleta-bg'; bgDiv.style.backgroundImage = `url(${item.image})`;
+            bgDiv.style.opacity = index === 0 ? '1' : '0'; bgDiv.style.zIndex = ruletaData.length - index;
+            bgDiv.id = `ruleta-bg-${index}`; ruletaBgContainer.appendChild(bgDiv);
+
+            const slide = document.createElement('div'); slide.className = 'swiper-slide swiper-slide-ruleta';
+            slide.innerHTML = `
+                <div class="ruleta-img-wrapper"><img src="${item.image}" alt="${item.title}"></div>
+                <div class="ruleta-info">
+                    <h4 class="font-serif text-lg md:text-xl text-champagne italic">${item.title}</h4>
+                    <p class="font-sans text-[10px] md:text-xs tracking-widest mt-1 md:mt-2 uppercase opacity-80">${item.year}</p>
+                </div>
+            `;
+            ruletaWrapper.appendChild(slide);
+        });
+
+        let currentRuletaIndex = -1; 
+        const swiperRuleta = new Swiper('.swiper-ruleta', {
+            direction: 'horizontal', effect: 'coverflow', grabCursor: true, centeredSlides: true, slidesPerView: 'auto', loop: true, speed: 1000,
+            coverflowEffect: { rotate: 5, stretch: 0, depth: 150, modifier: 1, slideShadows: false },
+            autoplay: { delay: 5000, disableOnInteraction: false }, navigation: { nextEl: '.ruleta-next', prevEl: '.ruleta-prev' }, slideActiveClass: 'swiper-slide-ruleta-active',
+            on: { init: function() { updateRuletaInfo(this.realIndex, true); }, slideChangeTransitionStart: function() { updateRuletaInfo(this.realIndex, false); } }
+        });
+
+        function updateRuletaInfo(index, isInit) {
+            if (currentRuletaIndex === index) return;
+            const prevIndex = currentRuletaIndex; currentRuletaIndex = index; const data = ruletaData[index];
+
+            gsap.to('.ruleta-title-anim', { y: '-100%', duration: 0.4, ease: "power2.in", onComplete: () => {
+                ruletaTitle.textContent = data.title; gsap.fromTo('.ruleta-title-anim', { y: '100%' }, { y: '0%', duration: 0.6, ease: "power3.out" });
+            }});
+            gsap.to('.ruleta-author-anim', { opacity: 0, y: -10, duration: 0.4, onComplete: () => {
+                ruletaAuthor.textContent = data.author; gsap.fromTo('.ruleta-author-anim', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", delay: 0.2 });
+            }});
+
+            if (!isInit && prevIndex !== -1) {
+                const nextBg = document.getElementById(`ruleta-bg-${index}`); const currentBgs = document.querySelectorAll('.ruleta-bg');
+                currentBgs.forEach((bg, i) => { if (i !== index && i !== prevIndex) { bg.style.zIndex = 1; bg.style.opacity = 0; } });
+                const prevBg = document.getElementById(`ruleta-bg-${prevIndex}`); if(prevBg) prevBg.style.zIndex = 2;
+                nextBg.style.zIndex = 3; nextBg.style.opacity = 1;
+
+                gsap.fromTo(nextBg, { clipPath: 'circle(0% at 50% 50%)', filter: 'brightness(1) grayscale(0%)' }, { clipPath: 'circle(150% at 50% 50%)', filter: 'brightness(0.6) grayscale(30%)', duration: 1.5, ease: "power3.inOut" });
+            }
+        }
+
+        // 7. PANORAMA INMERSIVO
+        const panoramaData = [
+            { id: 1, title: 'Turquoise Oasis', image: 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=800&auto=format&fit=crop' }, { id: 2, title: 'White Waterfall', image: 'https://images.unsplash.com/photo-1508459855340-fb63ac591728?q=80&w=800&auto=format&fit=crop' },
+            { id: 3, title: 'Blue Ocean', image: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?q=80&w=800&auto=format&fit=crop' }, { id: 4, title: 'Green Meadows', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop' },
+            { id: 5, title: 'Red Savanna', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=800&auto=format&fit=crop' }, { id: 6, title: 'Black Beginning', image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop' },
+            { id: 7, title: 'White Winter', image: 'https://images.unsplash.com/photo-1478719059408-592965723cbc?q=80&w=800&auto=format&fit=crop' }, { id: 8, title: 'Orange Sunset', image: 'https://images.unsplash.com/photo-1495344517868-8ebaf0a2044e?q=80&w=800&auto=format&fit=crop' },
+            { id: 9, title: 'Violet Dawn', image: 'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?q=80&w=800&auto=format&fit=crop' }, { id: 10, title: 'Blue Deep', image: 'https://images.unsplash.com/photo-1551244072-5d12893278ab?q=80&w=800&auto=format&fit=crop' }
+        ];
+
+        const panoramaRing = document.getElementById('panorama-ring'); const numCards = panoramaData.length;
+        function renderPanorama() {
+            panoramaRing.innerHTML = ''; const radius = window.innerWidth >= 768 ? 750 : 450; const theta = 360 / numCards;
+            panoramaData.forEach((item, index) => {
+                const angle = theta * index; const card = document.createElement('div'); card.className = 'panorama-card';
+                card.style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+                card.innerHTML = `<div class="panorama-title">${item.title}</div><div class="panorama-card-inner"><img src="${item.image}" alt="${item.title}" loading="lazy"></div>`;
+                panoramaRing.appendChild(card);
+            });
+        }
+        renderPanorama(); window.addEventListener('resize', renderPanorama);
+        gsap.to(panoramaRing, { rotationY: -360, ease: "none", scrollTrigger: { trigger: "#panorama", start: "top top", end: "+=200%", pin: true, scrub: 1 } });
+
+        // 8. LIENZO TÁCTIL
+        const brushCanvas = document.getElementById('brushCanvas'); const brushCtx = brushCanvas.getContext('2d');
+        const wrapper = document.getElementById('brush-wrapper'); const hint = document.getElementById('brush-hint');
+        let isDrawing = false; let lastX = 0; let lastY = 0;
+
+        function resizeBrushCanvas() {
+            brushCanvas.width = wrapper.offsetWidth; brushCanvas.height = wrapper.offsetHeight;
+            brushCtx.fillStyle = '#0F3B2F'; brushCtx.fillRect(0, 0, brushCanvas.width, brushCanvas.height);
+            brushCtx.globalCompositeOperation = 'destination-out'; brushCtx.lineJoin = 'round'; brushCtx.lineCap = 'round';
+            brushCtx.lineWidth = 100; brushCtx.shadowBlur = 30; brushCtx.shadowColor = 'black';
+        }
+        window.addEventListener('resize', resizeBrushCanvas); resizeBrushCanvas();
+
+        function startDrawing(e) {
+            isDrawing = true; gsap.to(hint, {opacity: 0, duration: 0.5});
+            const rect = brushCanvas.getBoundingClientRect(); lastX = (e.clientX || e.touches[0].clientX) - rect.left; lastY = (e.clientY || e.touches[0].clientY) - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return; e.preventDefault();
+            const rect = brushCanvas.getBoundingClientRect(); const currentX = (e.clientX || e.touches[0].clientX) - rect.left; const currentY = (e.clientY || e.touches[0].clientY) - rect.top;
+            brushCtx.beginPath(); brushCtx.moveTo(lastX, lastY); brushCtx.lineTo(currentX, currentY); brushCtx.stroke(); lastX = currentX; lastY = currentY;
+        }
+        function stopDrawing() { isDrawing = false; }
+
+        brushCanvas.addEventListener('mousedown', startDrawing); brushCanvas.addEventListener('mousemove', draw); brushCanvas.addEventListener('mouseup', stopDrawing); brushCanvas.addEventListener('mouseout', stopDrawing);
+        brushCanvas.addEventListener('touchstart', startDrawing, {passive: false}); brushCanvas.addEventListener('touchmove', draw, {passive: false}); brushCanvas.addEventListener('touchend', stopDrawing);
+
+
+        // ==========================================
+        // 9. LÓGICA DE EXPLORACIÓN 3D (WEBGL) OPTIMIZADA
+        // ==========================================
+        const container3D = document.getElementById('canvas-3d-container');
+        const btnActivate3D = document.getElementById('btn-activate-3d');
+        const btnClose3D = document.getElementById('btn-close-3d');
+        const info3D = document.getElementById('info-3d');
+
+        if (container3D && typeof THREE !== 'undefined') {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setClearColor(0x000000, 0); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container3D.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; 
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = false; 
+            controls.enablePan = false;
+            controls.minPolarAngle = Math.PI / 3; 
+            controls.maxPolarAngle = Math.PI / 1.5; 
+            
+            // Permitimos que rote solo al inicio para dar la sensación 3D sin interrumpir scroll
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 1.0;
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            scene.add(hemiLight);
+
+            const spotlight = new THREE.SpotLight(0xfff5e6, 1.2);
+            spotlight.position.set(3, 3, 6);
+            spotlight.angle = Math.PI / 5;
+            spotlight.penumbra = 0.3;
+            scene.add(spotlight);
+
+            const textureLoader = new THREE.TextureLoader();
+            const colorMap = textureLoader.load('https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80');
+
+            const paintMaterial = new THREE.MeshStandardMaterial({ map: colorMap, roughness: 0.3, metalness: 0.1 });
+            const sideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+            const geometry = new THREE.BoxGeometry(6, 4.5, 0.2); 
+            const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, sideMaterial];
+
+            const painting = new THREE.Mesh(geometry, materials);
+            scene.add(painting);
+
+            function adjustCamera() {
+                const aspect = window.innerWidth / window.innerHeight;
+                camera.aspect = aspect;
+                camera.updateProjectionMatrix();
+                camera.position.set(0, 0, aspect < 1 ? 12 : 8); 
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            adjustCamera();
+            window.addEventListener('resize', adjustCamera);
+
+            function animate3D() {
+                requestAnimationFrame(animate3D);
+                controls.update(); 
+                const time = Date.now() * 0.0005;
+                spotlight.position.x = 2 + Math.sin(time) * 3;
+                renderer.render(scene, camera);
+            }
+            animate3D();
+
+            // --- LÓGICA DE INTERACCIÓN OPT-IN ---
+            
+            btnActivate3D.addEventListener('click', () => {
+                // 1. Activar interacción con el canvas
+                container3D.classList.remove('pointer-events-none');
+                container3D.classList.add('cursor-orbit');
+                
+                // 2. Detener scroll de la página para enfocar la experiencia
+                lenis.stop(); 
+                
+                // 3. Detener auto-rotación para dar control al usuario
+                controls.autoRotate = false;
+                
+                // 4. Animaciones de UI
+                gsap.to(document.getElementById('btn-container-3d'), {opacity: 0, pointerEvents: 'none', duration: 0.3});
+                gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.3});
+                gsap.to(info3D, {opacity: 0.2, duration: 0.3}); // Atenuar ficha técnica
+            });
+
+            btnClose3D.addEventListener('click', () => {
+                // 1. Desactivar interacción con el canvas (deja pasar el scroll)
+                container3D.classList.add('pointer-events-none');
+                container3D.classList.remove('cursor-orbit');
+                
+                // 2. Reactivar scroll general
+                lenis.start(); 
+                
+                // 3. Volver a rotación automática suave
+                controls.autoRotate = true; 
+                
+                // 4. Animaciones de UI
+                gsap.to(document.getElementById('btn-container-3d'), {opacity: 1, pointerEvents: 'auto', duration: 0.3});
+                gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
+                gsap.to(info3D, {opacity: 1, duration: 0.3});
+                
+                // 5. Retornar cámara a su lugar original suavemente
+                const targetZ = (window.innerWidth / window.innerHeight) < 1 ? 12 : 8;
+                gsap.to(camera.position, { x: 0, y: 0, z: targetZ, duration: 1.5, ease: 'power2.inOut' });
+                gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: 'power2.inOut' });
+            });
+        }
+
+    </script>
+</body>
+</html>
