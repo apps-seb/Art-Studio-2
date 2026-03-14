@@ -154,25 +154,53 @@
     </div>
 
     <div id="modal-entrevista" class="modal">
-        <div class="modal-content relative w-[90%] max-w-2xl glass-panel rounded-2xl p-6 flex flex-col border border-champagne/30">
-            <button onclick="closeModal('modal-entrevista')" class="absolute top-4 right-4 text-white/50 hover:text-champagne transition-colors z-10">
+        <div class="modal-content relative w-[90%] max-w-3xl max-h-[90vh] glass-panel rounded-2xl p-6 flex flex-col border border-champagne/30">
+            <button onclick="closeModal('modal-entrevista')" class="absolute top-4 right-4 text-white/50 hover:text-champagne transition-colors z-20">
                 <i class="ph ph-x-circle text-3xl"></i>
             </button>
             
-            <h2 class="font-serif text-2xl text-beige mb-4 text-center mt-2">Voces de <span class="italic text-champagne">Transición</span></h2>
+            <h2 class="font-serif text-2xl md:text-3xl text-beige mb-6 text-center mt-2">Voces de <span class="italic text-champagne">Transición</span></h2>
             
-            <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-4">
-                <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1000&auto=format&fit=crop" alt="Entrevista Firmantes" class="absolute inset-0 w-full h-full object-cover opacity-50">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <button class="w-16 h-16 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                        <i class="ph-fill ph-play text-2xl ml-1"></i>
-                    </button>
+            <div class="overflow-y-auto custom-scroll pr-2 space-y-8 pb-4">
+                <!-- Video 1: Historia de vida -->
+                <div class="flex flex-col md:flex-row gap-4 items-center bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div class="w-full md:w-1/2 relative pb-[56.25%] md:pb-[28%] bg-black rounded-lg overflow-hidden border border-white/10 shrink-0">
+                        <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1000&auto=format&fit=crop" alt="Historia de vida" class="absolute inset-0 w-full h-full object-cover opacity-60">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <button class="w-14 h-14 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-lg shadow-black/50">
+                                <i class="ph-fill ph-play text-xl ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 text-left font-sans">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-user text-champagne text-lg"></i>
+                            <p class="text-[11px] text-champagne tracking-widest uppercase font-semibold">Capítulo 1</p>
+                        </div>
+                        <h3 class="text-lg text-beige font-medium mb-2">Historia de Vida</h3>
+                        <p class="text-sm font-light text-white/80 leading-relaxed">Conoce el testimonio personal del firmante de paz. Un relato íntimo sobre su trayectoria, los desafíos de la transición y el encuentro transformador con el arte como herramienta de sanación.</p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="text-center font-sans">
-                <p class="text-[11px] text-white/60 tracking-widest uppercase mb-1">Entrevista Exclusiva</p>
-                <p class="text-sm font-light text-white/90">El proceso creativo detrás de "Resiliencia de la Tierra" y el significado del arte en la reincorporación.</p>
+                <!-- Video 2: Inspiración del cuadro -->
+                <div class="flex flex-col md:flex-row-reverse gap-4 items-center bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div class="w-full md:w-1/2 relative pb-[56.25%] md:pb-[28%] bg-black rounded-lg overflow-hidden border border-white/10 shrink-0">
+                        <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=1000&auto=format&fit=crop" alt="Inspiración del cuadro" class="absolute inset-0 w-full h-full object-cover opacity-60">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <button class="w-14 h-14 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer shadow-lg shadow-black/50">
+                                <i class="ph-fill ph-play text-xl ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 text-left font-sans">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph ph-palette text-champagne text-lg"></i>
+                            <p class="text-[11px] text-champagne tracking-widest uppercase font-semibold">Capítulo 2</p>
+                        </div>
+                        <h3 class="text-lg text-beige font-medium mb-2">La Inspiración</h3>
+                        <p class="text-sm font-light text-white/80 leading-relaxed">Descubre el proceso creativo detrás de "Resiliencia de la Tierra". Los simbolismos ocultos en cada trazo, el origen de los pigmentos naturales y el mensaje de esperanza plasmado en el lienzo recuperado.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -242,28 +270,70 @@
             spotlight.position.set(3, 4, 6);
             spotlight.angle = Math.PI / 4;
             spotlight.penumbra = 0.4;
+            spotlight.castShadow = true;
+            spotlight.shadow.mapSize.width = 1024;
+            spotlight.shadow.mapSize.height = 1024;
             scene.add(spotlight);
 
-            // Texturas (Placeholder: Reemplazar por la imagen real del cuadro)
+            // Texturas
             const textureLoader = new THREE.TextureLoader();
             const colorMap = textureLoader.load('https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80');
 
+            // Simulación de lienzo para la parte de atrás y bordes
+            const canvasTexture = textureLoader.load('https://images.unsplash.com/photo-1596484552834-6a58f860f5b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80'); // Textura de lienzo/tela
+            canvasTexture.wrapS = THREE.RepeatWrapping;
+            canvasTexture.wrapT = THREE.RepeatWrapping;
+            canvasTexture.repeat.set(4, 4);
+
             const paintMaterial = new THREE.MeshStandardMaterial({ 
                 map: colorMap, 
-                roughness: 0.4, // Reflejo sutil simulando óleo
-                metalness: 0.05 
+                roughness: 0.6, // Reflejo sutil simulando óleo
+                metalness: 0.1,
+                bumpMap: colorMap, // Auto-bump para simular relieve de pintura
+                bumpScale: 0.05
             });
-            const sideMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x111111, // Bastidor oscuro
-                roughness: 0.9 
+
+            // Material para los bordes y la parte trasera (simulando el lienzo crudo)
+            const canvasMaterial = new THREE.MeshStandardMaterial({
+                map: canvasTexture,
+                color: 0xe3d9c6, // Tono crudo/beige
+                roughness: 0.9,
+                bumpMap: canvasTexture,
+                bumpScale: 0.02
             });
             
-            // Proporción del lienzo
+            // Geometría del lienzo
             const geometry = new THREE.BoxGeometry(6, 7.5, 0.2); 
-            const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, sideMaterial];
+            // Orden de caras: right, left, top, bottom, front, back
+            const materials = [
+                canvasMaterial, // derecha
+                canvasMaterial, // izquierda
+                canvasMaterial, // arriba
+                canvasMaterial, // abajo
+                paintMaterial,  // frente (pintura)
+                canvasMaterial  // atrás (lienzo crudo)
+            ];
 
             painting = new THREE.Mesh(geometry, materials);
             
+            // Añadir un bastidor de madera sutil en la parte trasera
+            const frameGeometry = new THREE.BoxGeometry(5.6, 7.1, 0.05);
+            const woodTexture = textureLoader.load('https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'); // Textura de madera
+            const frameMaterial = new THREE.MeshStandardMaterial({
+                map: woodTexture,
+                color: 0x8b5a2b,
+                roughness: 0.8
+            });
+            const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+            frame.position.z = -0.125; // Detrás del lienzo
+            painting.add(frame);
+
+            // Sombras para mayor realismo
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            painting.castShadow = true;
+            painting.receiveShadow = true;
+
             // Ajustar posición vertical para dejar espacio a la UI inferior
             painting.position.y = aspect < 1 ? 1.5 : 0; 
             
