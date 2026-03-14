@@ -154,25 +154,43 @@
     </div>
 
     <div id="modal-entrevista" class="modal">
-        <div class="modal-content relative w-[90%] max-w-2xl glass-panel rounded-2xl p-6 flex flex-col border border-champagne/30">
+        <div class="modal-content relative w-[90%] max-w-2xl max-h-[85vh] overflow-y-auto custom-scroll glass-panel rounded-2xl p-6 flex flex-col border border-champagne/30">
             <button onclick="closeModal('modal-entrevista')" class="absolute top-4 right-4 text-white/50 hover:text-champagne transition-colors z-10">
                 <i class="ph ph-x-circle text-3xl"></i>
             </button>
             
             <h2 class="font-serif text-2xl text-beige mb-4 text-center mt-2">Voces de <span class="italic text-champagne">Transición</span></h2>
             
-            <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-4">
-                <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1000&auto=format&fit=crop" alt="Entrevista Firmantes" class="absolute inset-0 w-full h-full object-cover opacity-50">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <button class="w-16 h-16 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                        <i class="ph-fill ph-play text-2xl ml-1"></i>
-                    </button>
+            <div class="space-y-6">
+                <!-- Video 1 -->
+                <div>
+                    <h3 class="font-serif text-xl text-champagne mb-2">Historia de vida del firmante</h3>
+                    <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-2">
+                        <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1000&auto=format&fit=crop" alt="Historia de vida" class="absolute inset-0 w-full h-full object-cover opacity-50">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <button class="w-16 h-16 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+                                <i class="ph-fill ph-play text-2xl ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-white/60 tracking-widest uppercase mb-1 font-sans">Parte 1</p>
+                    <p class="text-sm font-light text-white/90 font-sans">Conoce el recorrido personal y las vivencias que forjaron este camino hacia la paz.</p>
                 </div>
-            </div>
 
-            <div class="text-center font-sans">
-                <p class="text-[11px] text-white/60 tracking-widest uppercase mb-1">Entrevista Exclusiva</p>
-                <p class="text-sm font-light text-white/90">El proceso creativo detrás de "Resiliencia de la Tierra" y el significado del arte en la reincorporación.</p>
+                <!-- Video 2 -->
+                <div>
+                    <h3 class="font-serif text-xl text-champagne mb-2">La inspiración del cuadro</h3>
+                    <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-2">
+                        <img src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?q=80&w=1000&auto=format&fit=crop" alt="Inspiración del cuadro" class="absolute inset-0 w-full h-full object-cover opacity-50">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <button class="w-16 h-16 rounded-full bg-champagne/90 text-forest flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+                                <i class="ph-fill ph-play text-2xl ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-white/60 tracking-widest uppercase mb-1 font-sans">Parte 2</p>
+                    <p class="text-sm font-light text-white/90 font-sans">El proceso creativo detrás de "Resiliencia de la Tierra" y la visión artística.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -246,10 +264,12 @@
 
             // Texturas (Placeholder: Reemplazar por la imagen real del cuadro)
             const textureLoader = new THREE.TextureLoader();
-            const colorMap = textureLoader.load('https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80');
+            const colorMap = textureLoader.load('https://www.donostiakultura.eus/imgs/particulares/casas-cultura/lugaritz/ikastaroak/2022/4b_pintura_abstracta.jpg');
 
             const paintMaterial = new THREE.MeshStandardMaterial({ 
                 map: colorMap, 
+                bumpMap: colorMap,
+                bumpScale: 0.05,
                 roughness: 0.4, // Reflejo sutil simulando óleo
                 metalness: 0.05 
             });
