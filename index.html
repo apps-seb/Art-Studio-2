@@ -34,7 +34,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/ARButton.js"></script>
+    <script src="https://unpkg.com/fflate@0.8.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
@@ -77,6 +81,37 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
         .custom-scroll::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 4px; }
+
+        /* Estilización personalizada para el botón nativo de AR */
+        #ARButton {
+            position: absolute !important;
+            bottom: 30px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 40 !important;
+            background: rgba(200, 169, 126, 0.9) !important;
+            color: #0F3B2F !important;
+            border: none !important;
+            border-radius: 9999px !important;
+            padding: 12px 24px !important;
+            font-family: 'Inter', sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.2em !important;
+            text-transform: uppercase !important;
+            backdrop-filter: blur(8px) !important;
+            opacity: 0; 
+            pointer-events: none;
+            transition: background 0.3s ease, color 0.3s ease !important;
+        }
+        #ARButton:hover {
+            background: #fff !important;
+            color: #0F3B2F !important;
+        }
+        /* Ocultar silenciosamente el botón en navegadores de PC donde la AR no es posible */
+        #ARButton:disabled {
+            display: none !important; 
+        }
     </style>
 </head>
 <body class="antialiased selection:bg-champagne selection:text-forest">
@@ -105,10 +140,6 @@
         
         <button id="btn-activate-3d" class="w-full max-w-sm py-4 rounded-xl border border-champagne text-forest bg-champagne hover:bg-white hover:border-white transition-colors font-sans text-xs font-semibold tracking-[0.2em] uppercase flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(200,169,126,0.2)]">
             <i class="ph ph-cube text-lg"></i> Explorar Obra en 3D
-        </button>
-
-        <button id="btn-activate-ar" class="w-full max-w-sm py-3 rounded-xl border border-champagne/50 text-champagne bg-black/40 backdrop-blur-md hover:bg-champagne hover:text-black hover:border-champagne transition-colors font-sans text-xs font-semibold tracking-[0.2em] uppercase flex items-center justify-center gap-2" style="display: none;">
-            <i class="ph ph-bounding-box text-lg"></i> Ver en mi espacio (AR)
         </button>
 
         <div class="flex w-full max-w-sm gap-3">
@@ -235,7 +266,7 @@
             });
         });
 
-        // 2. LÓGICA DE EXPLORACIÓN 3D (WEBGL)
+        // 2. LÓGICA DE EXPLORACIÓN 3D Y AR (WebXR + iOS Quick Look)
         const container3D = document.getElementById('canvas-3d-container');
         const btnActivate3D = document.getElementById('btn-activate-3d');
         const btnClose3D = document.getElementById('btn-close-3d');
@@ -257,9 +288,63 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.outputEncoding = THREE.sRGBEncoding;
             
-            // Habilitar WebXR para la Realidad Aumentada
+            // Habilitar WebXR nativo para Android
             renderer.xr.enabled = true;
             container3D.appendChild(renderer.domElement);
+
+            // Generar botón base de WebXR
+            const arButtonEl = ARButton.createButton(renderer);
+            arButtonEl.id = 'ARButton';
+            document.body.appendChild(arButtonEl);
+
+            // DETECCIÓN DE iOS PARA INYECTAR EXPORTADOR USDZ (AR Quick Look)
+            const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent)) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            
+            if (isIOS) {
+                // Clonamos el botón para remover los eventos por defecto de WebXR que marcan error en iOS
+                const newArBtn = arButtonEl.cloneNode(true);
+                arButtonEl.parentNode.replaceChild(newArBtn, arButtonEl);
+                
+                newArBtn.textContent = 'VER EN TU ESPACIO';
+                newArBtn.disabled = false;
+                newArBtn.style.display = 'block'; 
+                
+                newArBtn.onclick = async function() {
+                    const originalText = newArBtn.textContent;
+                    newArBtn.textContent = 'PREPARANDO AR...';
+                    
+                    try {
+                        // Clonamos la obra para poder reducir su escala y que en la casa del usuario
+                        // no mida 8 metros, sino aproximadamente 85cm.
+                        const exportMesh = painting.clone();
+                        exportMesh.scale.set(0.1, 0.1, 0.1); 
+                        exportMesh.position.set(0, 0, 0);
+                        
+                        // Exportar a USDZ en tiempo real
+                        const exporter = new THREE.USDZExporter();
+                        const arraybuffer = await exporter.parse( exportMesh );
+                        const blob = new Blob( [ arraybuffer ], { type: 'application/octet-stream' } );
+                        const url = URL.createObjectURL( blob );
+                        
+                        // Lanzar el visor AR nativo de Apple
+                        const a = document.createElement( 'a' );
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = 'Resiliencia_Tierra.usdz';
+                        a.rel = 'ar';
+                        
+                        document.body.appendChild( a );
+                        a.click();
+                        document.body.removeChild( a );
+                        URL.revokeObjectURL( url );
+                    } catch (err) {
+                        console.error("Error USDZ:", err);
+                        alert("Hubo un problema al cargar el modelo 3D para iOS.");
+                    } finally {
+                        newArBtn.textContent = originalText;
+                    }
+                };
+            }
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true; 
@@ -282,16 +367,13 @@
             spotlight.penumbra = 0.4;
             scene.add(spotlight);
 
-            // --- SOLUCIÓN DE RAÍZ ---
-            // Llamamos exactamente al archivo que subiste a la raíz de tu GitHub
             const textureLoader = new THREE.TextureLoader();
             const imageUrl = 'IMG_6383.jpeg'; 
 
             const colorMap = textureLoader.load(imageUrl, 
-                undefined, // Función onSuccess (ThreeJS actualiza automático)
-                undefined, // Función onProgress
+                undefined, 
+                undefined, 
                 function(err) {
-                    // Si falla, te lanzará este aviso directo a tu pantalla.
                     alert("⚠️ ERROR: No se pudo cargar " + imageUrl + ". Asegúrate de que el archivo HTML y la imagen estén en la misma carpeta exacta de GitHub.");
                 }
             );
@@ -299,7 +381,7 @@
             colorMap.encoding = THREE.sRGBEncoding;
 
             const paintMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xffffff, // Color base blanco para que no interfiera con la textura
+                color: 0xffffff,
                 map: colorMap, 
                 bumpMap: colorMap,
                 bumpScale: 0.05,
@@ -314,65 +396,30 @@
             });
             
             const geometry = new THREE.BoxGeometry(8.5, 5.6, 0.2); 
-            // Caras: derecha, izquierda, arriba, abajo, frente (4), atrás (5)
             const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, paintMaterial];
 
             painting = new THREE.Mesh(geometry, materials);
-            
-            // Un Grupo ayuda a manejar la escala diferenciada entre la vista 3D en pantalla y la vista AR
-            const paintingGroup = new THREE.Group();
-            paintingGroup.add(painting);
-            
-            paintingGroup.position.y = aspect < 1 ? 1.5 : 0; 
-            scene.add(paintingGroup);
+            painting.position.y = aspect < 1 ? 1.5 : 0; 
+            scene.add(painting);
 
-            // Guardamos la referencia global para la animación (ya que se anima su posición o escala)
-            window.paintingGroup = paintingGroup;
-            window.painting = painting; 
-
-            // Integrar ARButton al dom de ThreeJS (oculto por defecto)
-            const arButtonEl = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
-            arButtonEl.style.display = 'none'; // lo ocultamos para estilizar uno propio o integrarlo a nuestra UI
-            document.body.appendChild(arButtonEl);
-
-            // Escuchar el inicio y fin de sesión AR
-            renderer.xr.addEventListener('sessionstart', () => {
-                // Al entrar a AR, escalar el grupo para que sea de tamaño real (0.85m x 0.56m)
-                // y posicionarlo un poco hacia adelante de la cámara (-1.5m en Z) y en altura central (0).
-                gsap.killTweensOf(paintingGroup.position);
-                gsap.killTweensOf(paintingGroup.scale);
-                
-                paintingGroup.scale.set(0.1, 0.1, 0.1); 
-                paintingGroup.position.set(0, 0, -1.5);
-                
-                // Ocultamos la UI regular
-                gsap.to(actionMenu, {opacity: 0, pointerEvents: 'none', duration: 0.3});
-                gsap.to(infoOverlay, {opacity: 0, pointerEvents: 'none', duration: 0.3});
+            // --- EVENTOS NATIVOS AR ANDROID (WebXR) ---
+            renderer.xr.addEventListener('sessionstart', function () {
+                controls.enabled = false;
+                painting.scale.set(0.1, 0.1, 0.1); // Escalar a tamaño real (aprox 85cm)
+                painting.position.set(0, 0, -1.5); // Posicionar frente a la cámara
                 gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
             });
 
-            renderer.xr.addEventListener('sessionend', () => {
-                // Al salir de AR, restaurar la escala y posición
-                paintingGroup.scale.set(1, 1, 1);
-                
+            renderer.xr.addEventListener('sessionend', function () {
+                controls.enabled = true;
+                painting.scale.set(1, 1, 1);
                 const currentAspect = window.innerWidth / window.innerHeight;
-                paintingGroup.position.set(0, currentAspect < 1 ? 1.5 : 0, 0);
-
-                // Restaurar la UI de exploración si es que estaba activo el modo 3D
-                if (!container3D.classList.contains('pointer-events-none')) {
-                    gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
-                } else {
-                    gsap.to(actionMenu, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
-                    gsap.to(infoOverlay, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
-                }
+                painting.position.set(0, currentAspect < 1 ? 1.5 : 0, 0); 
+                gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.3});
             });
 
-            window.arButtonEl = arButtonEl;
-
             window.addEventListener('resize', onWindowResize, false);
-            
-            // Usar setAnimationLoop en lugar de requestAnimationFrame es obligatorio para WebXR
-            renderer.setAnimationLoop(animate3D);
+            renderer.setAnimationLoop(animate3D); // setAnimationLoop es obligatorio para WebXR
         }
 
         function onWindowResize() {
@@ -380,10 +427,10 @@
             camera.aspect = aspect;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            if(window.paintingGroup) {
-                window.paintingGroup.position.y = aspect < 1 ? 1.5 : 0;
+            if (!renderer.xr.isPresenting) {
+                painting.position.y = aspect < 1 ? 1.5 : 0;
+                camera.position.z = aspect < 1 ? 14 : 9;
             }
-            camera.position.z = aspect < 1 ? 14 : 9;
         }
 
         function animate3D() {
@@ -395,33 +442,22 @@
             init3D();
         }
 
-        // --- LÓGICA DE BOTONES 3D y AR ---
-        const btnActivateAR = document.getElementById('btn-activate-ar');
-
-        // Mostrar el botón de AR si la API está disponible (detectamos la creación del botón de ThreeJS)
-        if ('xr' in navigator) {
-            navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                if (supported) {
-                    btnActivateAR.style.display = 'flex';
-                }
-            });
-        }
-
-        btnActivateAR.addEventListener('click', () => {
-            // El botón generado por ThreeJS ARButton está oculto en el DOM. Simplemente le hacemos click.
-            if(window.arButtonEl) {
-                window.arButtonEl.click();
-            }
-        });
-
+        // --- LÓGICA DE BOTONES ---
         btnActivate3D.addEventListener('click', () => {
             container3D.classList.remove('pointer-events-none');
             controls.autoRotate = false;
-            gsap.to(window.paintingGroup.position, { y: 0, duration: 1, ease: 'power2.out' });
+            gsap.to(painting.position, { y: 0, duration: 1, ease: 'power2.out' });
             
             gsap.to(actionMenu, {opacity: 0, y: 20, pointerEvents: 'none', duration: 0.4});
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
             gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4, delay: 0.2});
+
+            // Mostrar el botón de AR si está disponible
+            const arBtn = document.getElementById('ARButton');
+            if(arBtn) {
+                arBtn.style.pointerEvents = 'auto';
+                gsap.to(arBtn, {opacity: 1, duration: 0.4, delay: 0.2});
+            }
         });
 
         btnClose3D.addEventListener('click', () => {
@@ -432,13 +468,20 @@
             const targetY = aspect < 1 ? 1.5 : 0;
             const targetZ = aspect < 1 ? 14 : 9;
 
-            gsap.to(window.paintingGroup.position, { y: targetY, duration: 1.5, ease: 'power2.inOut' });
+            gsap.to(painting.position, { y: targetY, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(camera.position, { x: 0, y: 0, z: targetZ, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: 'power2.inOut' });
             
             gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
             gsap.to(actionMenu, {opacity: 1, y: 0, pointerEvents: 'auto', duration: 0.4, delay: 0.3});
             gsap.to(infoOverlay, {opacity: 1, y: 0, duration: 0.4, delay: 0.3});
+
+            // Ocultar el botón de AR
+            const arBtn = document.getElementById('ARButton');
+            if(arBtn) {
+                arBtn.style.pointerEvents = 'none';
+                gsap.to(arBtn, {opacity: 0, duration: 0.3});
+            }
         });
 
     </script>
