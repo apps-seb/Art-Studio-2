@@ -340,6 +340,7 @@
                 renderer.xr.addEventListener('sessionstart', () => {
                     painting.userData.originalPos = painting.position.clone();
                     painting.userData.originalScale = painting.scale.clone();
+                    // En Android si funciona escalar el grupo entero
                     painting.scale.set(0.2, 0.2, 0.2);
                     painting.position.set(0, 0, -2); 
                 });
@@ -379,35 +380,49 @@
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // CRÍTICO: Usar MeshStandardMaterial para iOS, MeshBasicMaterial genera un archivo vacío de 321 bytes
+                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría (0.2 = 1.7 metros)
+                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
+                        arFrameGeom.scale(0.2, 0.2, 0.2); 
                         const arFrame = new THREE.Mesh(
-                            new THREE.BoxGeometry(8.5, 5.6, 0.18),
+                            arFrameGeom,
                             new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
                         );
                         
-                        // CRÍTICO: Usar BoxGeometry, el exportador a veces falla al leer un PlaneGeometry sin volumen
+                        // 2. SOLUCIÓN TEXTURA: Crear un Canvas para forzar a incrustar la imagen físicamente
+                        const canvas = document.createElement('canvas');
+                        canvas.width = texture.image.width || 1024;
+                        canvas.height = texture.image.height || 1024;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(texture.image, 0, 0, canvas.width, canvas.height);
+                        
+                        const bakedTexture = new THREE.CanvasTexture(canvas);
+                        bakedTexture.encoding = THREE.sRGBEncoding;
+                        // Ajuste para evitar que el canvas quede al revés
+                        bakedTexture.flipY = false;
+
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
+                        arCanvasGeom.scale(0.2, 0.2, 0.2);
                         const arCanvas = new THREE.Mesh(
-                            new THREE.BoxGeometry(8.5, 5.6, 0.02),
-                            new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture, roughness: 0.5 })
+                            arCanvasGeom,
+                            new THREE.MeshStandardMaterial({ color: 0xffffff, map: bakedTexture, roughness: 0.5 })
                         );
-                        arCanvas.position.z = 0.1; 
+                        
+                        // Posición z también debe ajustarse a la escala (0.1 * 0.2)
+                        arCanvas.position.z = 0.02; 
                         
                         arGroup.add(arFrame);
                         arGroup.add(arCanvas);
-                        arGroup.scale.set(0.2, 0.2, 0.2); 
                         
+                        // Procesamos el modelo con las medidas reales y textura incrustada
                         const arraybuffer = await exporter.parse(arGroup);
                         
-                        // CRÍTICO: MIME estricto para que Safari no intente descargarlo como texto/desconocido
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                         const arUrl = URL.createObjectURL(blob);
                         
-                        // Configuración blindada para forzar AR Quick Look
                         arButtonElement.setAttribute('href', arUrl);
                         arButtonElement.setAttribute('rel', 'ar');
-                        arButtonElement.setAttribute('download', 'obra.usdz'); // Asegura la extensión al archivo generado
+                        arButtonElement.setAttribute('download', 'obra.usdz');
                         
-                        // Requisito interno de Apple: Un <img> dentro del enlace 'ar'
                         const img = document.createElement('img');
                         img.src = imageUrl;
                         img.style.display = 'none';
