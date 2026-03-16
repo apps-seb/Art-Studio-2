@@ -381,43 +381,25 @@
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
-                        // El lienzo base es 8.5 x 5.6. Para que quede de 0.85m x 0.56m, la escala es 0.1
-                        const arScale = 0.1;
-                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        arFrameGeom.scale(arScale, arScale, arScale);
-                        
-                        // 2. SOLUCIÓN TEXTURA: Crear un Canvas para forzar a incrustar la imagen físicamente
-                        // Y usar un solo BoxGeometry con materiales por cara para evitar Z-fighting
-                        const canvas = document.createElement('canvas');
-                        canvas.width = texture.image.width || 1024;
-                        canvas.height = texture.image.height || 1024;
-                        const ctx = canvas.getContext('2d');
-
-                        // Flip vertical context for proper texture mapping on BoxGeometry
-                        ctx.translate(0, canvas.height);
-                        ctx.scale(1, -1);
-                        ctx.drawImage(texture.image, 0, 0, canvas.width, canvas.height);
-                        
-                        const bakedTexture = new THREE.CanvasTexture(canvas);
-                        bakedTexture.encoding = THREE.sRGBEncoding;
-                        // En Three.js BoxGeometry el material en index 4 es la cara frontal (+Z)
-                        const arFrontMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, map: bakedTexture, roughness: 0.5 });
+                        // 1. SOLUCIÓN ESCALA: Crear geometrías directamente en metros (0.85m x 0.56m)
+                        const arFrameGeom = new THREE.BoxGeometry(0.85, 0.56, 0.018);
                         const arSideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-                        
-                        const materials = [
-                            arSideMaterial, // right
-                            arSideMaterial, // left
-                            arSideMaterial, // top
-                            arSideMaterial, // bottom
-                            arFrontMaterial, // front
-                            arSideMaterial  // back
-                        ];
-                        
-                        const arFrame = new THREE.Mesh(arFrameGeom, materials);
+                        const arFrame = new THREE.Mesh(arFrameGeom, arSideMaterial);
                         arGroup.add(arFrame);
                         
-                        // Procesamos el modelo con las medidas reales y textura incrustada
+                        // 2. SOLUCIÓN TEXTURA: Malla separada para la pintura para evitar bugs de multi-material
+                        const arCanvasGeom = new THREE.BoxGeometry(0.85, 0.56, 0.001);
+                        const arFrontMaterial = new THREE.MeshStandardMaterial({ 
+                            color: 0xffffff, 
+                            map: texture, 
+                            roughness: 0.5 
+                        });
+                        const arCanvas = new THREE.Mesh(arCanvasGeom, arFrontMaterial);
+                        // Z offset: mitad del grosor del marco (0.009) + separación (0.001) + mitad del lienzo (0.0005)
+                        arCanvas.position.z = 0.0105;
+                        arGroup.add(arCanvas);
+                        
+                        // Procesamos el modelo con las medidas reales y textura separada
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
