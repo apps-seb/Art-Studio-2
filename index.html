@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D (Se mantiene igual) ---
+                // --- MATERIALES VISTA WEB 3D (Se mantiene igual, funciona bien) ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -371,44 +371,54 @@
                 painting.add(baseMesh);
                 
                 const frontMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.01), paintMaterial);
-                frontMesh.position.z = 0.095; 
+                frontMesh.position.z = 0.095; // perfectly al ras del frente
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (CORREGIDO) ---
+                // --- GENERADOR AR NATIVO PARA IOS (CORREGIDO Y REFORZADO) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. Marco (Cubo sólido horneado)
-                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        arFrameGeom.scale(0.2, 0.2, 0.2); 
+                        // Scaler final para todo el assembly
+                        // No aplicaremos escalas a las geometrías individuales, sino a todo el grupo raíz que exportaremos.
+                        
+                        // 1. Marco (Cubo sólido dark, unscaled)
+                        const rawDepth = 0.18; // Profundidad original
+                        const rawFrameGeom = new THREE.BoxGeometry(8.5, 5.6, rawDepth);
                         const arFrame = new THREE.Mesh(
-                            arFrameGeom,
-                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
+                            rawFrameGeom,
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0x111111, // Negro/Gris muy oscuro para el marco
+                                roughness: 0.9, 
+                                metalness: 0.0 
+                            })
                         );
                         arGroup.add(arFrame);
 
-                        // 2. Lienzo (Plano horneado)
-                        // SOLUCIÓN: Usamos PlaneGeometry para asegurar que solo texturice el frente,
-                        // eliminando los bordes laterales estirados de BoxGeometry.
-                        const arCanvasGeom = new THREE.PlaneGeometry(8.5, 5.6); 
-                        arCanvasGeom.scale(0.2, 0.2, 0.2);
+                        // 2. Lienzo (Plano, unscaled, con textura)
+                        // SOLUCIÓN DEFINITIVA: Usamos un plano y lo posicionamos con un margen claro y seguro
+                        // en el espacio crudo (raw space) para asegurar el orden de renderizado en AR.
+                        const rawCanvasGeom = new THREE.PlaneGeometry(8.5, 5.6); 
                         const arCanvas = new THREE.Mesh(
-                            arCanvasGeom,
+                            rawCanvasGeom,
                             new THREE.MeshStandardMaterial({ 
                                 color: 0xffffff, 
                                 map: texture, // Textura directa
-                                roughness: 0.5,
-                                metalness: 0.1
+                                roughness: 0.6,
+                                metalness: 0.1,
+                                side: THREE.FrontSide // Forzamos single-sided para evitar verlo desde atrás
                             })
                         );
                         
-                        // Posicionar el plano 0.5mm por delante del frente del marco para evitar z-fighting.
-                        // Profundidad horneada del marco es 0.18 * 0.2 = 0.036m (cara frontal z = 0.018m)
-                        arCanvas.position.z = 0.0185; 
-                        
+                        // Posicionar el plano 0.01 unidades (1cm crudo, 2mm escalado) por delante de la cara frontal del marco.
+                        // La cara frontal del marco está en z = rawDepth / 2 = 0.09.
+                        arCanvas.position.z = (rawDepth / 2) + 0.01; // 0.09 + 0.01 = 0.10. Esto garantiza que esté por delante.
                         arGroup.add(arCanvas);
+
+                        // Escala global para que coincida con el tamaño real (aprox 1.7m de ancho)
+                        // Esto es más limpio para USDZExporter que pre-escalar geometrías.
+                        arGroup.scale.set(0.2, 0.2, 0.2);
 
                         // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
                         const arraybuffer = await exporter.parse(arGroup);
