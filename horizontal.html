@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>+Art | Experiencia Inmersiva - Memoria y Paz</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-    
+
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -87,7 +87,7 @@
         <p class="text-champagne text-[10px] tracking-[0.4em] uppercase mb-2">Colección Transiciones</p>
         <h1 class="font-serif text-3xl md:text-4xl text-beige mb-1 leading-tight">Resiliencia de la Tierra</h1>
         <p class="font-sans text-xs text-white/70 mb-4 tracking-widest uppercase">Por: Colectivo Firmantes</p>
-        
+
         <div class="border-y border-champagne/20 py-3 mb-3 font-sans text-[11px] text-white/80 space-y-1">
             <p><strong class="text-champagne font-normal">Técnica:</strong> Pigmentos naturales sobre lienzo recuperado.</p>
             <p><strong class="text-champagne font-normal">Año:</strong> 2026</p>
@@ -104,7 +104,7 @@
     </button>
 
     <div id="action-menu" class="absolute bottom-8 left-0 w-full px-6 z-30 flex flex-col items-center gap-3 transition-opacity duration-500">
-        
+
         <button id="btn-activate-3d" class="w-full max-w-sm py-4 rounded-xl border border-champagne text-forest bg-champagne hover:bg-white hover:border-white transition-colors font-sans text-xs font-semibold tracking-[0.2em] uppercase flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(200,169,126,0.2)]">
             <i class="ph ph-cube text-lg"></i> Explorar Obra en 3D
         </button>
@@ -130,12 +130,12 @@
             <button onclick="closeModal('modal-historia')" class="absolute top-4 right-4 text-white/50 hover:text-champagne transition-colors">
                 <i class="ph ph-x-circle text-3xl"></i>
             </button>
-            
+
             <div class="text-center mb-6 mt-2">
                 <i class="ph ph-leaf text-3xl text-champagne mb-2"></i>
                 <h2 class="font-serif text-3xl text-beige">De las Armas<br><span class="italic text-champagne">al Pincel</span></h2>
             </div>
-            
+
             <div class="overflow-y-auto custom-scroll pr-2 text-white/80 font-sans text-sm font-light leading-relaxed space-y-4">
                 <p>
                     Esta obra es un testimonio vivo de la transición. Creada por un colectivo de firmantes de paz, el lienzo mismo fue recuperado de telas utilizadas en antiguos campamentos, transformando un símbolo de conflicto en una plataforma para la creación.
@@ -158,9 +158,9 @@
             <button onclick="closeModal('modal-entrevista')" class="absolute top-4 right-4 text-white/50 hover:text-champagne transition-colors z-10">
                 <i class="ph ph-x-circle text-3xl"></i>
             </button>
-            
+
             <h2 class="font-serif text-2xl text-beige mb-4 text-center mt-2">Voces de <span class="italic text-champagne">Transición</span></h2>
-            
+
             <div class="space-y-6">
                 <!-- Video 1 -->
                 <div>
@@ -256,28 +256,28 @@
 
         function init3D() {
             scene = new THREE.Scene();
-            
+
             // Cámara ajustada para vista móvil retrato
             const aspect = window.innerWidth / window.innerHeight;
             camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-            camera.position.set(0, 0, aspect < 1 ? 14 : 9); 
-            
+            camera.position.set(0, 0, aspect < 1 ? 14 : 9);
+
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setClearColor(0x000000, 0); 
+            renderer.setClearColor(0x000000, 0);
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container3D.appendChild(renderer.domElement);
 
             // Controles
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true; 
+            controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             controls.enableZoom = true; // Permitimos zoom al explorar
             controls.minDistance = 5;
             controls.maxDistance = 20;
-            controls.minPolarAngle = Math.PI / 3; 
-            controls.maxPolarAngle = Math.PI / 1.5; 
-            
+            controls.minPolarAngle = Math.PI / 3;
+            controls.maxPolarAngle = Math.PI / 1.5;
+
             // Auto-rotación inicial (Modo Vitrina)
             controls.autoRotate = true;
             controls.autoRotateSpeed = 1.5;
@@ -295,29 +295,29 @@
             // Texturas (Placeholder: Reemplazar por la imagen real del cuadro)
             const textureLoader = new THREE.TextureLoader();
             textureLoader.setCrossOrigin('anonymous');
-            const colorMap = textureLoader.load('https://www.donostiakultura.eus/imgs/particulares/casas-cultura/lugaritz/ikastaroak/2022/4b_pintura_abstracta.jpg');
+            const colorMap = textureLoader.load('https://mercacol.com.co/wp-content/uploads/2026/03/IMG_6383-scaled.jpeg');
 
-            const paintMaterial = new THREE.MeshStandardMaterial({ 
-                map: colorMap, 
+            const paintMaterial = new THREE.MeshStandardMaterial({
+                map: colorMap,
                 bumpMap: colorMap,
                 bumpScale: 0.05,
                 roughness: 0.4, // Reflejo sutil simulando óleo
-                metalness: 0.05 
+                metalness: 0.05
             });
-            const sideMaterial = new THREE.MeshStandardMaterial({ 
+            const sideMaterial = new THREE.MeshStandardMaterial({
                 color: 0x111111, // Bastidor oscuro
-                roughness: 0.9 
+                roughness: 0.9
             });
-            
-            // Proporción del lienzo
-            const geometry = new THREE.BoxGeometry(6, 7.5, 0.2); 
+
+            // Proporción del lienzo (horizontal 1.5 aspect ratio)
+            const geometry = new THREE.BoxGeometry(7.5, 5.0, 0.2);
             const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, paintMaterial];
 
             painting = new THREE.Mesh(geometry, materials);
-            
+
             // Ajustar posición vertical para dejar espacio a la UI inferior
-            painting.position.y = aspect < 1 ? 1.5 : 0; 
-            
+            painting.position.y = aspect < 1 ? 1.5 : 0;
+
             scene.add(painting);
 
             window.addEventListener('resize', onWindowResize, false);
@@ -336,7 +336,7 @@
 
         function animate3D() {
             requestAnimationFrame(animate3D);
-            controls.update(); 
+            controls.update();
             renderer.render(scene, camera);
         }
 
@@ -346,17 +346,17 @@
         }
 
         // --- LÓGICA DE BOTONES 3D ---
-        
+
         btnActivate3D.addEventListener('click', () => {
             // 1. Activar interacción con el canvas
             container3D.classList.remove('pointer-events-none');
-            
+
             // 2. Detener auto-rotación
             controls.autoRotate = false;
-            
+
             // Centrar el cuadro visualmente al explorar
             gsap.to(painting.position, { y: 0, duration: 1, ease: 'power2.out' });
-            
+
             // 3. Animaciones de Interfaz (Ocultar menú, mostrar botón cerrar)
             gsap.to(actionMenu, {opacity: 0, y: 20, pointerEvents: 'none', duration: 0.4});
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
@@ -366,10 +366,10 @@
         btnClose3D.addEventListener('click', () => {
             // 1. Desactivar interacción
             container3D.classList.add('pointer-events-none');
-            
+
             // 2. Reactivar auto-rotación
-            controls.autoRotate = true; 
-            
+            controls.autoRotate = true;
+
             // Devolver cuadro a su posición superior si es móvil
             const aspect = window.innerWidth / window.innerHeight;
             const targetY = aspect < 1 ? 1.5 : 0;
@@ -378,7 +378,7 @@
             gsap.to(painting.position, { y: targetY, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(camera.position, { x: 0, y: 0, z: targetZ, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: 'power2.inOut' });
-            
+
             // 3. Animaciones de Interfaz
             gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
             gsap.to(actionMenu, {opacity: 1, y: 0, pointerEvents: 'auto', duration: 0.4, delay: 0.3});
