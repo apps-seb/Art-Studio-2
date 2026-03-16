@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D ---
+                // --- MATERIALES VISTA WEB 3D (Se mantiene para la web) ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,24 +374,15 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (SOLUCIÓN DEFINITIVA Y SEGURA) ---
+                // --- GENERADOR AR NATIVO PARA IOS (SOLO EL LIENZO - PRUEBA) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. Marco (Cubo sólido oscuro)
-                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        const arFrame = new THREE.Mesh(
-                            arFrameGeom,
-                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
-                        );
-                        arGroup.add(arFrame);
-
-                        // 2. Lienzo (Cubo con grosor microscópico en lugar de plano)
-                        // Esto garantiza que el USDZExporter no falle (usa materiales estándar, no arreglos)
-                        // y elimina el problema visual de textura estirada en los bordes.
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.001); // 1 milímetro de grosor
+                        // 1. SOLO EL LIENZO (Sin marco extra)
+                        // Le damos un grosor de 5cm (0.05 crudo) para que parezca un cuadro/bastidor
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.05); 
                         const arCanvas = new THREE.Mesh(
                             arCanvasGeom,
                             new THREE.MeshStandardMaterial({ 
@@ -401,17 +392,12 @@
                             })
                         );
                         
-                        // Acomodamos la cara trasera del lienzo microscópico para que repose 
-                        // exactamente sobre la cara frontal del marco oscuro.
-                        // Cara frontal del marco: 0.18 / 2 = 0.09
-                        // Centro del lienzo: 0.09 + (0.001 / 2) = 0.0905
-                        arCanvas.position.z = 0.0905; 
                         arGroup.add(arCanvas);
 
-                        // Escalar el grupo final a tamaño real
+                        // Escalar todo a tamaño real (aprox 1.7m de ancho)
                         arGroup.scale.set(0.2, 0.2, 0.2);
 
-                        // Procesamos el modelo
+                        // Procesamos el modelo único
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
