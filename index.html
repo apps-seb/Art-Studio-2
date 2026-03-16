@@ -341,8 +341,7 @@
                     painting.userData.originalPos = painting.position.clone();
                     painting.userData.originalScale = painting.scale.clone();
                     // En Android si funciona escalar el grupo entero
-                    // Escala de 0.1 para que el ancho de 8.5m quede de 0.85m y el alto de 5.6m en 0.56m
-                    painting.scale.set(0.1, 0.1, 0.1);
+                    painting.scale.set(0.2, 0.2, 0.2);
                     painting.position.set(0, 0, -2); 
                 });
 
@@ -381,25 +380,37 @@
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. SOLUCIÓN ESCALA: Crear geometrías directamente en metros (0.85m x 0.56m)
-                        const arFrameGeom = new THREE.BoxGeometry(0.85, 0.56, 0.018);
-                        const arSideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-                        const arFrame = new THREE.Mesh(arFrameGeom, arSideMaterial);
-                        arGroup.add(arFrame);
+                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
+                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
+                        arFrameGeom.scale(0.2, 0.2, 0.2); 
+                        const arFrame = new THREE.Mesh(
+                            arFrameGeom,
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0x111111, 
+                                roughness: 0.8,
+                                metalness: 0.2 
+                            })
+                        );
                         
-                        // 2. SOLUCIÓN TEXTURA: Malla separada para la pintura para evitar bugs de multi-material
-                        const arCanvasGeom = new THREE.BoxGeometry(0.85, 0.56, 0.001);
-                        const arFrontMaterial = new THREE.MeshStandardMaterial({ 
-                            color: 0xffffff, 
-                            map: texture, 
-                            roughness: 0.5 
-                        });
-                        const arCanvas = new THREE.Mesh(arCanvasGeom, arFrontMaterial);
-                        // Z offset: mitad del grosor del marco (0.009) + separación (0.001) + mitad del lienzo (0.0005)
-                        arCanvas.position.z = 0.0105;
+                        // 2. SOLUCIÓN TEXTURA: Pasar la textura cargada originalmente
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
+                        arCanvasGeom.scale(0.2, 0.2, 0.2);
+                        const arCanvas = new THREE.Mesh(
+                            arCanvasGeom,
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0xffffff, 
+                                map: texture, // <--- Aquí usamos la textura directamente
+                                roughness: 0.5,
+                                metalness: 0.1
+                            })
+                        );
+                        
+                        arCanvas.position.z = 0.02; 
+                        
+                        arGroup.add(arFrame);
                         arGroup.add(arCanvas);
                         
-                        // Procesamos el modelo con las medidas reales y textura separada
+                        // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
