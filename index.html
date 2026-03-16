@@ -39,13 +39,12 @@
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; /* Vital para la experiencia app-like */
+            overflow: hidden; 
             background: radial-gradient(circle at center, #1F4D40 0%, #051611 100%);
             color: #EAE5DF; font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Glassmorphism Premium */
         .glass-panel {
             background: rgba(5, 22, 17, 0.6);
             backdrop-filter: blur(12px);
@@ -54,7 +53,6 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.5);
         }
 
-        /* Modales */
         .modal {
             position: fixed; inset: 0; z-index: 100;
             display: flex; justify-content: center; align-items: center;
@@ -75,7 +73,6 @@
             transform: translateY(0);
         }
 
-        /* Custom Scrollbar para el modal */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
         .custom-scroll::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 4px; }
@@ -162,22 +159,14 @@
             <h2 class="font-serif text-2xl text-beige mb-4 text-center mt-2">Voces de <span class="italic text-champagne">Transición</span></h2>
             
             <div class="space-y-6">
-                <!-- Video 1 -->
                 <div>
                     <h3 class="font-serif text-xl text-champagne mb-2">Proceso en acción</h3>
-                    <!-- INSTRUCCIONES PARA CAMBIAR EL VIDEO O LA FOTO DE PORTADA:
-                         1. Para cambiar el enlace del video: Reemplaza la URL en el atributo href="..." en la etiqueta <a> de abajo.
-                         2. Para cambiar la foto de portada: Reemplaza la URL en el atributo src="..." de la etiqueta <img> de abajo.
-                    -->
                     <a href="https://www.facebook.com/share/r/171G7hzM1n/" target="_blank" rel="noopener noreferrer" class="group block w-full bg-black rounded-lg overflow-hidden border border-champagne/50 shadow-[0_0_15px_rgba(200,169,126,0.3)] mb-2 relative min-h-[550px]">
 
-                        <!-- Imagen de portada con animación de zoom fluida al pasar el mouse -->
                         <img src="https://mercacol.com.co/wp-content/uploads/2026/03/IMG_6382.jpeg" alt="Portada del video" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700 ease-in-out">
 
-                        <!-- Superposición oscura sutil para asegurar que el botón resalte siempre -->
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-500"></div>
 
-                        <!-- Botón interactivo central -->
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <div class="w-20 h-20 rounded-full bg-champagne/90 text-forest flex items-center justify-center group-hover:scale-110 group-hover:bg-champagne transition-all duration-300 shadow-[0_0_20px_rgba(200,169,126,0.5)] group-hover:shadow-[0_0_30px_rgba(200,169,126,0.8)]">
                                 <i class="ph-fill ph-play text-3xl ml-2"></i>
@@ -192,7 +181,6 @@
                     <p class="text-sm font-light text-white/90 font-sans">Una mirada cercana al proceso de creación y pintado en el estudio.</p>
                 </div>
 
-                <!-- Video 2 -->
                 <div>
                     <h3 class="font-serif text-xl text-champagne mb-2">Historia de vida del firmante</h3>
                     <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-2">
@@ -207,7 +195,6 @@
                     <p class="text-sm font-light text-white/90 font-sans">Conoce el recorrido personal y las vivencias que forjaron este camino hacia la paz.</p>
                 </div>
 
-                <!-- Video 3 -->
                 <div>
                     <h3 class="font-serif text-xl text-champagne mb-2">La inspiración del cuadro</h3>
                     <div class="relative w-full pb-[56.25%] bg-black rounded-lg overflow-hidden border border-white/10 mb-2">
@@ -235,7 +222,6 @@
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // Cerrar modal al hacer clic fuera del contenido
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', function(e) {
                 if(e.target === this) {
@@ -251,13 +237,11 @@
         const infoOverlay = document.getElementById('info-overlay');
         const actionMenu = document.getElementById('action-menu');
 
-        // Inicializamos variables Three.js
         let scene, camera, renderer, controls, painting;
 
         function init3D() {
             scene = new THREE.Scene();
             
-            // Cámara ajustada para vista móvil retrato
             const aspect = window.innerWidth / window.innerHeight;
             camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
             camera.position.set(0, 0, aspect < 1 ? 14 : 9); 
@@ -266,23 +250,21 @@
             renderer.setClearColor(0x000000, 0); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputEncoding = THREE.sRGBEncoding;
             container3D.appendChild(renderer.domElement);
 
-            // Controles
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true; 
             controls.dampingFactor = 0.05;
-            controls.enableZoom = true; // Permitimos zoom al explorar
+            controls.enableZoom = true; 
             controls.minDistance = 5;
             controls.maxDistance = 20;
             controls.minPolarAngle = Math.PI / 3; 
             controls.maxPolarAngle = Math.PI / 1.5; 
             
-            // Auto-rotación inicial (Modo Vitrina)
             controls.autoRotate = true;
             controls.autoRotateSpeed = 1.5;
 
-            // Iluminación
             const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
             scene.add(hemiLight);
 
@@ -292,32 +274,42 @@
             spotlight.penumbra = 0.4;
             scene.add(spotlight);
 
-            // Texturas (Placeholder: Reemplazar por la imagen real del cuadro)
+            // --- SOLUCIÓN DE RAÍZ ---
+            // Llamamos exactamente al archivo que subiste a la raíz de tu GitHub
             const textureLoader = new THREE.TextureLoader();
-            textureLoader.setCrossOrigin('anonymous');
-            const colorMap = textureLoader.load('https://www.donostiakultura.eus/imgs/particulares/casas-cultura/lugaritz/ikastaroak/2022/4b_pintura_abstracta.jpg');
+            const imageUrl = 'IMG_6383.jpeg'; 
+
+            const colorMap = textureLoader.load(imageUrl, 
+                undefined, // Función onSuccess (ThreeJS actualiza automático)
+                undefined, // Función onProgress
+                function(err) {
+                    // Si falla, te lanzará este aviso directo a tu pantalla.
+                    alert("⚠️ ERROR: No se pudo cargar " + imageUrl + ". Asegúrate de que el archivo HTML y la imagen estén en la misma carpeta exacta de GitHub.");
+                }
+            );
+            
+            colorMap.encoding = THREE.sRGBEncoding;
 
             const paintMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, // Color base blanco para que no interfiera con la textura
                 map: colorMap, 
                 bumpMap: colorMap,
                 bumpScale: 0.05,
-                roughness: 0.4, // Reflejo sutil simulando óleo
+                roughness: 0.4, 
                 metalness: 0.05 
             });
+            
             const sideMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x111111, // Bastidor oscuro
+                color: 0x111111, 
                 roughness: 0.9 
             });
             
-            // Proporción del lienzo
-            const geometry = new THREE.BoxGeometry(6, 7.5, 0.2); 
+            const geometry = new THREE.BoxGeometry(8.5, 5.6, 0.2); 
+            // Caras: derecha, izquierda, arriba, abajo, frente (4), atrás (5)
             const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, paintMaterial];
 
             painting = new THREE.Mesh(geometry, materials);
-            
-            // Ajustar posición vertical para dejar espacio a la UI inferior
             painting.position.y = aspect < 1 ? 1.5 : 0; 
-            
             scene.add(painting);
 
             window.addEventListener('resize', onWindowResize, false);
@@ -329,7 +321,6 @@
             camera.aspect = aspect;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // Reajustar posición Y del cuadro al rotar pantalla
             painting.position.y = aspect < 1 ? 1.5 : 0;
             camera.position.z = aspect < 1 ? 14 : 9;
         }
@@ -340,37 +331,25 @@
             renderer.render(scene, camera);
         }
 
-        // Ejecutar inicialización 3D
         if (typeof THREE !== 'undefined') {
             init3D();
         }
 
         // --- LÓGICA DE BOTONES 3D ---
-        
         btnActivate3D.addEventListener('click', () => {
-            // 1. Activar interacción con el canvas
             container3D.classList.remove('pointer-events-none');
-            
-            // 2. Detener auto-rotación
             controls.autoRotate = false;
-            
-            // Centrar el cuadro visualmente al explorar
             gsap.to(painting.position, { y: 0, duration: 1, ease: 'power2.out' });
             
-            // 3. Animaciones de Interfaz (Ocultar menú, mostrar botón cerrar)
             gsap.to(actionMenu, {opacity: 0, y: 20, pointerEvents: 'none', duration: 0.4});
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
             gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4, delay: 0.2});
         });
 
         btnClose3D.addEventListener('click', () => {
-            // 1. Desactivar interacción
             container3D.classList.add('pointer-events-none');
-            
-            // 2. Reactivar auto-rotación
             controls.autoRotate = true; 
             
-            // Devolver cuadro a su posición superior si es móvil
             const aspect = window.innerWidth / window.innerHeight;
             const targetY = aspect < 1 ? 1.5 : 0;
             const targetZ = aspect < 1 ? 14 : 9;
@@ -379,7 +358,6 @@
             gsap.to(camera.position, { x: 0, y: 0, z: targetZ, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: 'power2.inOut' });
             
-            // 3. Animaciones de Interfaz
             gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
             gsap.to(actionMenu, {opacity: 1, y: 0, pointerEvents: 'auto', duration: 0.4, delay: 0.3});
             gsap.to(infoOverlay, {opacity: 1, y: 0, duration: 0.4, delay: 0.3});
