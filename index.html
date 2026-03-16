@@ -341,7 +341,8 @@
                     painting.userData.originalPos = painting.position.clone();
                     painting.userData.originalScale = painting.scale.clone();
                     // En Android si funciona escalar el grupo entero
-                    painting.scale.set(0.2, 0.2, 0.2);
+                    // Escala de 0.1 para que el ancho de 8.5m quede de 0.85m y el alto de 5.6m en 0.56m
+                    painting.scale.set(0.1, 0.1, 0.1);
                     painting.position.set(0, 0, -2); 
                 });
 
@@ -380,38 +381,41 @@
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría (0.2 = 1.7 metros)
+                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
+                        // El lienzo base es 8.5 x 5.6. Para que quede de 0.85m x 0.56m, la escala es 0.1
+                        const arScale = 0.1;
                         const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        arFrameGeom.scale(0.2, 0.2, 0.2); 
-                        const arFrame = new THREE.Mesh(
-                            arFrameGeom,
-                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
-                        );
+                        arFrameGeom.scale(arScale, arScale, arScale);
                         
                         // 2. SOLUCIÓN TEXTURA: Crear un Canvas para forzar a incrustar la imagen físicamente
+                        // Y usar un solo BoxGeometry con materiales por cara para evitar Z-fighting
                         const canvas = document.createElement('canvas');
                         canvas.width = texture.image.width || 1024;
                         canvas.height = texture.image.height || 1024;
                         const ctx = canvas.getContext('2d');
+
+                        // Flip vertical context for proper texture mapping on BoxGeometry
+                        ctx.translate(0, canvas.height);
+                        ctx.scale(1, -1);
                         ctx.drawImage(texture.image, 0, 0, canvas.width, canvas.height);
                         
                         const bakedTexture = new THREE.CanvasTexture(canvas);
                         bakedTexture.encoding = THREE.sRGBEncoding;
-                        // Ajuste para evitar que el canvas quede al revés
-                        bakedTexture.flipY = false;
-
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
-                        arCanvasGeom.scale(0.2, 0.2, 0.2);
-                        const arCanvas = new THREE.Mesh(
-                            arCanvasGeom,
-                            new THREE.MeshStandardMaterial({ color: 0xffffff, map: bakedTexture, roughness: 0.5 })
-                        );
+                        // En Three.js BoxGeometry el material en index 4 es la cara frontal (+Z)
+                        const arFrontMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, map: bakedTexture, roughness: 0.5 });
+                        const arSideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
                         
-                        // Posición z también debe ajustarse a la escala (0.1 * 0.2)
-                        arCanvas.position.z = 0.02; 
+                        const materials = [
+                            arSideMaterial, // right
+                            arSideMaterial, // left
+                            arSideMaterial, // top
+                            arSideMaterial, // bottom
+                            arFrontMaterial, // front
+                            arSideMaterial  // back
+                        ];
                         
+                        const arFrame = new THREE.Mesh(arFrameGeom, materials);
                         arGroup.add(arFrame);
-                        arGroup.add(arCanvas);
                         
                         // Procesamos el modelo con las medidas reales y textura incrustada
                         const arraybuffer = await exporter.parse(arGroup);
