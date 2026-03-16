@@ -189,7 +189,7 @@
                     <span class="text-champagne italic">"El arte nos ha permitido decir aquello que las palabras aún no logran articular. Cada trazo es un paso hacia la reconciliación, con nosotros mismos y con la tierra que habitamos."</span>
                 </p>
                 <p>
-                    El relieve que puedes observar en la pintura representa las cicatrices del pasado, integradas ahora en una nueva belleza, demostrando que la paz no es el olvido, sino la transformación consciente de nuestra memoria.
+                    El relieve que puedes observar en la pintura representa las cicatrices del pasado, integradas ahora en una nueva belleza, demostrando que la paz no es el olvido, sino la transformación consciente de nuestra memory.
                 </p>
             </div>
         </div>
@@ -380,6 +380,10 @@
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
+                        // CORRECCIÓN 1: VOLTEAR LA TEXTURA (Lo azul debe aparecer abajo)
+                        // Three.js por defecto tiene flipY = true. Lo cambiamos a false para voltear.
+                        texture.flipY = false;
+
                         // 1. SOLO EL LIENZO (Sin marco extra)
                         // Le damos un grosor de 5cm (0.05 crudo) para que parezca un cuadro/bastidor
                         const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.05); 
@@ -394,8 +398,10 @@
                         
                         arGroup.add(arCanvas);
 
-                        // Escalar todo a tamaño real (aprox 1.7m de ancho)
-                        arGroup.scale.set(0.2, 0.2, 0.2);
+                        // CORRECCIÓN 2: REDUCIR EL TAMAÑO (Estaba "muy grande")
+                        // Cambiamos la escala de 0.2 a 0.1 para que tenga un tamaño proporcional
+                        // a un cuadro de galería estándar (aprox. 85cm x 56cm).
+                        arGroup.scale.set(0.1, 0.1, 0.1);
 
                         // Procesamos el modelo único
                         const arraybuffer = await exporter.parse(arGroup);
