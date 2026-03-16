@@ -11,7 +11,6 @@
     
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
     <script>
-        // Blindaje absoluto: Aseguramos que fflate sea global antes de que cualquier otra librería interfiera
         if (typeof fflate !== 'undefined') {
             window.fflate = fflate;
         }
@@ -86,7 +85,6 @@
         .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
         .custom-scroll::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 4px; }
 
-        /* Estilos botón de Realidad Aumentada */
         #ARButton {
             position: absolute !important;
             top: 1.5rem !important; 
@@ -378,23 +376,21 @@
                 // --- GENERADOR AR NATIVO PARA IOS ---
                 if (isIOS && arButtonElement) {
                     try {
-                        if (typeof fflate === 'undefined') {
-                            throw new Error("fflate no está disponible globalmente");
-                        }
-
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
+                        // CRÍTICO: Usar MeshStandardMaterial para iOS, MeshBasicMaterial genera un archivo vacío de 321 bytes
                         const arFrame = new THREE.Mesh(
                             new THREE.BoxGeometry(8.5, 5.6, 0.18),
-                            new THREE.MeshBasicMaterial({ color: 0x111111 })
+                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
                         );
                         
+                        // CRÍTICO: Usar BoxGeometry, el exportador a veces falla al leer un PlaneGeometry sin volumen
                         const arCanvas = new THREE.Mesh(
-                            new THREE.PlaneGeometry(8.5, 5.6),
-                            new THREE.MeshBasicMaterial({ color: 0xffffff, map: texture })
+                            new THREE.BoxGeometry(8.5, 5.6, 0.02),
+                            new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture, roughness: 0.5 })
                         );
-                        arCanvas.position.z = 0.091; 
+                        arCanvas.position.z = 0.1; 
                         
                         arGroup.add(arFrame);
                         arGroup.add(arCanvas);
@@ -402,17 +398,22 @@
                         
                         const arraybuffer = await exporter.parse(arGroup);
                         
-                        const blob = new Blob([arraybuffer], { type: 'application/octet-stream' });
-                        const arUrl = URL.createObjectURL(blob) + '#obra.usdz';
+                        // CRÍTICO: MIME estricto para que Safari no intente descargarlo como texto/desconocido
+                        const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
+                        const arUrl = URL.createObjectURL(blob);
                         
+                        // Configuración blindada para forzar AR Quick Look
                         arButtonElement.setAttribute('href', arUrl);
                         arButtonElement.setAttribute('rel', 'ar');
-                        arButtonElement.innerHTML = '<i class="ph ph-bounding-box text-sm"></i> VER EN PARED (AR)';
+                        arButtonElement.setAttribute('download', 'obra.usdz'); // Asegura la extensión al archivo generado
                         
+                        // Requisito interno de Apple: Un <img> dentro del enlace 'ar'
                         const img = document.createElement('img');
                         img.src = imageUrl;
                         img.style.display = 'none';
                         arButtonElement.appendChild(img);
+
+                        arButtonElement.innerHTML = '<i class="ph ph-bounding-box text-sm"></i> VER EN PARED (AR)';
 
                     } catch(e) {
                         console.error("Detalle del Error AR:", e);
