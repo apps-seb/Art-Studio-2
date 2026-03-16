@@ -9,6 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+    <script>
+        // Blindaje absoluto: Aseguramos que fflate sea global antes de que cualquier otra librería interfiera
+        if (typeof fflate !== 'undefined') {
+            window.fflate = fflate;
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/ARButton.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/examples/js/exporters/USDZExporter.js"></script>
+    
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -30,15 +43,6 @@
             }
         }
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    
-    <script src="https://unpkg.com/fflate@0.6.9/umd/index.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/ARButton.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/USDZExporter.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
@@ -371,13 +375,16 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (CON BUGS RESUELTOS) ---
+                // --- GENERADOR AR NATIVO PARA IOS ---
                 if (isIOS && arButtonElement) {
                     try {
+                        if (typeof fflate === 'undefined') {
+                            throw new Error("fflate no está disponible globalmente");
+                        }
+
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // Utilizamos materiales básicos para evitar corrupciones en Safari
                         const arFrame = new THREE.Mesh(
                             new THREE.BoxGeometry(8.5, 5.6, 0.18),
                             new THREE.MeshBasicMaterial({ color: 0x111111 })
@@ -393,10 +400,8 @@
                         arGroup.add(arCanvas);
                         arGroup.scale.set(0.2, 0.2, 0.2); 
                         
-                        // Generamos el archivo usando fflate internamente
                         const arraybuffer = await exporter.parse(arGroup);
                         
-                        // Forzamos el tipo MIME y añadimos el hash #obra.usdz
                         const blob = new Blob([arraybuffer], { type: 'application/octet-stream' });
                         const arUrl = URL.createObjectURL(blob) + '#obra.usdz';
                         
