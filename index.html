@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D (Se mantiene para la navegación interactiva) ---
+                // --- MATERIALES VISTA WEB 3D ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,46 +374,45 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (SOLUCIÓN DEFINITIVA) ---
+                // --- GENERADOR AR NATIVO PARA IOS (SOLUCIÓN DEFINITIVA Y SEGURA) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
+                        const arGroup = new THREE.Group();
                         
-                        // SOLUCIÓN: Usamos UN SOLO BLOQUE para el cuadro entero.
-                        const arGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        
-                        // Material oscuro para los bordes y la parte trasera
-                        const darkMat = new THREE.MeshStandardMaterial({ 
-                            color: 0x111111, 
-                            roughness: 0.8 
-                        });
-                        
-                        // Material con la pintura para el frente
-                        const texMat = new THREE.MeshStandardMaterial({ 
-                            color: 0xffffff, 
-                            map: texture, 
-                            roughness: 0.5 
-                        });
+                        // 1. Marco (Cubo sólido oscuro)
+                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
+                        const arFrame = new THREE.Mesh(
+                            arFrameGeom,
+                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
+                        );
+                        arGroup.add(arFrame);
 
-                        // Three.js permite pasar un arreglo de 6 materiales para cada cara del cubo:
-                        // Orden: [Derecha, Izquierda, Arriba, Abajo, Frente, Atrás]
-                        // El índice 4 corresponde a la cara Frontal (+Z).
-                        const materials = [
-                            darkMat, // 0: Derecha
-                            darkMat, // 1: Izquierda
-                            darkMat, // 2: Arriba
-                            darkMat, // 3: Abajo
-                            texMat,  // 4: FRENTE (Aquí va la obra)
-                            darkMat  // 5: Atrás
-                        ];
-
-                        const arMesh = new THREE.Mesh(arGeom, materials);
+                        // 2. Lienzo (Cubo con grosor microscópico en lugar de plano)
+                        // Esto garantiza que el USDZExporter no falle (usa materiales estándar, no arreglos)
+                        // y elimina el problema visual de textura estirada en los bordes.
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.001); // 1 milímetro de grosor
+                        const arCanvas = new THREE.Mesh(
+                            arCanvasGeom,
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0xffffff, 
+                                map: texture, 
+                                roughness: 0.5 
+                            })
+                        );
                         
-                        // Escalar todo el cubo a tamaño real (aprox 1.7m)
-                        arMesh.scale.set(0.2, 0.2, 0.2);
+                        // Acomodamos la cara trasera del lienzo microscópico para que repose 
+                        // exactamente sobre la cara frontal del marco oscuro.
+                        // Cara frontal del marco: 0.18 / 2 = 0.09
+                        // Centro del lienzo: 0.09 + (0.001 / 2) = 0.0905
+                        arCanvas.position.z = 0.0905; 
+                        arGroup.add(arCanvas);
 
-                        // Procesamos el modelo único (el exportador lo lee perfectamente)
-                        const arraybuffer = await exporter.parse(arMesh);
+                        // Escalar el grupo final a tamaño real
+                        arGroup.scale.set(0.2, 0.2, 0.2);
+
+                        // Procesamos el modelo
+                        const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                         const arUrl = URL.createObjectURL(blob);
