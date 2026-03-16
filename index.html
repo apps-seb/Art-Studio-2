@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D ---
+                // --- MATERIALES VISTA WEB 3D (Se mantiene para la web) ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,43 +374,35 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS ---
+                // --- GENERADOR AR NATIVO PARA IOS (SOLO EL BASTIDOR - ESTADO ANTERIOR FUNCIONAL) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
-                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
-                        arFrameGeom.scale(0.2, 0.2, 0.2); 
-                        const arFrame = new THREE.Mesh(
-                            arFrameGeom,
-                            new THREE.MeshStandardMaterial({ 
-                                color: 0x111111, 
-                                roughness: 0.8,
-                                metalness: 0.2 
-                            })
-                        );
-                        
-                        // 2. SOLUCIÓN TEXTURA: Pasar la textura cargada originalmente
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
-                        arCanvasGeom.scale(0.2, 0.2, 0.2);
+                        // 1. CLONAR LA TEXTURA: Solo afectamos la versión de AR
+                        const arTexture = texture.clone();
+                        arTexture.flipY = false; // Azul abajo
+                        arTexture.needsUpdate = true;
+
+                        // 2. SOLO EL BASTIDOR DEL CUADRO: Eliminamos el marco oscuro
+                        // Volvemos a un bastidor sólido de 5cm (0.05 crudo) para evitar fallos de profundidad.
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.05); 
+
                         const arCanvas = new THREE.Mesh(
                             arCanvasGeom,
                             new THREE.MeshStandardMaterial({ 
                                 color: 0xffffff, 
-                                map: texture, // <--- Aquí usamos la textura directamente
-                                roughness: 0.5,
-                                metalness: 0.1
+                                map: arTexture, 
+                                roughness: 0.5 
                             })
                         );
-                        
-                        arCanvas.position.z = 0.02; 
-                        
-                        arGroup.add(arFrame);
                         arGroup.add(arCanvas);
-                        
-                        // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
+
+                        // 3. TAMAÑO AJUSTADO: Mantenemos la escala de 0.1
+                        arGroup.scale.set(0.1, 0.1, 0.1);
+
+                        // Procesamos el modelo compuesto
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
