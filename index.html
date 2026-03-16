@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D (Se mantiene igual, funciona bien) ---
+                // --- MATERIALES VISTA WEB 3D (Se mantiene para la navegación interactiva) ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -371,57 +371,49 @@
                 painting.add(baseMesh);
                 
                 const frontMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.01), paintMaterial);
-                frontMesh.position.z = 0.095; // perfectly al ras del frente
+                frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (CORREGIDO Y REFORZADO) ---
+                // --- GENERADOR AR NATIVO PARA IOS (SOLUCIÓN DEFINITIVA) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
-                        const arGroup = new THREE.Group();
                         
-                        // Scaler final para todo el assembly
-                        // No aplicaremos escalas a las geometrías individuales, sino a todo el grupo raíz que exportaremos.
+                        // SOLUCIÓN: Usamos UN SOLO BLOQUE para el cuadro entero.
+                        const arGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
                         
-                        // 1. Marco (Cubo sólido dark, unscaled)
-                        const rawDepth = 0.18; // Profundidad original
-                        const rawFrameGeom = new THREE.BoxGeometry(8.5, 5.6, rawDepth);
-                        const arFrame = new THREE.Mesh(
-                            rawFrameGeom,
-                            new THREE.MeshStandardMaterial({ 
-                                color: 0x111111, // Negro/Gris muy oscuro para el marco
-                                roughness: 0.9, 
-                                metalness: 0.0 
-                            })
-                        );
-                        arGroup.add(arFrame);
-
-                        // 2. Lienzo (Plano, unscaled, con textura)
-                        // SOLUCIÓN DEFINITIVA: Usamos un plano y lo posicionamos con un margen claro y seguro
-                        // en el espacio crudo (raw space) para asegurar el orden de renderizado en AR.
-                        const rawCanvasGeom = new THREE.PlaneGeometry(8.5, 5.6); 
-                        const arCanvas = new THREE.Mesh(
-                            rawCanvasGeom,
-                            new THREE.MeshStandardMaterial({ 
-                                color: 0xffffff, 
-                                map: texture, // Textura directa
-                                roughness: 0.6,
-                                metalness: 0.1,
-                                side: THREE.FrontSide // Forzamos single-sided para evitar verlo desde atrás
-                            })
-                        );
+                        // Material oscuro para los bordes y la parte trasera
+                        const darkMat = new THREE.MeshStandardMaterial({ 
+                            color: 0x111111, 
+                            roughness: 0.8 
+                        });
                         
-                        // Posicionar el plano 0.01 unidades (1cm crudo, 2mm escalado) por delante de la cara frontal del marco.
-                        // La cara frontal del marco está en z = rawDepth / 2 = 0.09.
-                        arCanvas.position.z = (rawDepth / 2) + 0.01; // 0.09 + 0.01 = 0.10. Esto garantiza que esté por delante.
-                        arGroup.add(arCanvas);
+                        // Material con la pintura para el frente
+                        const texMat = new THREE.MeshStandardMaterial({ 
+                            color: 0xffffff, 
+                            map: texture, 
+                            roughness: 0.5 
+                        });
 
-                        // Escala global para que coincida con el tamaño real (aprox 1.7m de ancho)
-                        // Esto es más limpio para USDZExporter que pre-escalar geometrías.
-                        arGroup.scale.set(0.2, 0.2, 0.2);
+                        // Three.js permite pasar un arreglo de 6 materiales para cada cara del cubo:
+                        // Orden: [Derecha, Izquierda, Arriba, Abajo, Frente, Atrás]
+                        // El índice 4 corresponde a la cara Frontal (+Z).
+                        const materials = [
+                            darkMat, // 0: Derecha
+                            darkMat, // 1: Izquierda
+                            darkMat, // 2: Arriba
+                            darkMat, // 3: Abajo
+                            texMat,  // 4: FRENTE (Aquí va la obra)
+                            darkMat  // 5: Atrás
+                        ];
 
-                        // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
-                        const arraybuffer = await exporter.parse(arGroup);
+                        const arMesh = new THREE.Mesh(arGeom, materials);
+                        
+                        // Escalar todo el cubo a tamaño real (aprox 1.7m)
+                        arMesh.scale.set(0.2, 0.2, 0.2);
+
+                        // Procesamos el modelo único (el exportador lo lee perfectamente)
+                        const arraybuffer = await exporter.parse(arMesh);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                         const arUrl = URL.createObjectURL(blob);
