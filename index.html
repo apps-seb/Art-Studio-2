@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D ---
+                // --- MATERIALES VISTA WEB 3D (Se mantiene igual) ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,42 +374,42 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS ---
+                // --- GENERADOR AR NATIVO PARA IOS (CORREGIDO) ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
+                        // 1. Marco (Cubo sólido horneado)
                         const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
                         arFrameGeom.scale(0.2, 0.2, 0.2); 
                         const arFrame = new THREE.Mesh(
                             arFrameGeom,
-                            new THREE.MeshStandardMaterial({ 
-                                color: 0x111111, 
-                                roughness: 0.8,
-                                metalness: 0.2 
-                            })
+                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
                         );
-                        
-                        // 2. SOLUCIÓN TEXTURA: Pasar la textura cargada originalmente
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
+                        arGroup.add(arFrame);
+
+                        // 2. Lienzo (Plano horneado)
+                        // SOLUCIÓN: Usamos PlaneGeometry para asegurar que solo texturice el frente,
+                        // eliminando los bordes laterales estirados de BoxGeometry.
+                        const arCanvasGeom = new THREE.PlaneGeometry(8.5, 5.6); 
                         arCanvasGeom.scale(0.2, 0.2, 0.2);
                         const arCanvas = new THREE.Mesh(
                             arCanvasGeom,
                             new THREE.MeshStandardMaterial({ 
                                 color: 0xffffff, 
-                                map: texture, // <--- Aquí usamos la textura directamente
+                                map: texture, // Textura directa
                                 roughness: 0.5,
                                 metalness: 0.1
                             })
                         );
                         
-                        arCanvas.position.z = 0.02; 
+                        // Posicionar el plano 0.5mm por delante del frente del marco para evitar z-fighting.
+                        // Profundidad horneada del marco es 0.18 * 0.2 = 0.036m (cara frontal z = 0.018m)
+                        arCanvas.position.z = 0.0185; 
                         
-                        arGroup.add(arFrame);
                         arGroup.add(arCanvas);
-                        
+
                         // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
                         const arraybuffer = await exporter.parse(arGroup);
                         
