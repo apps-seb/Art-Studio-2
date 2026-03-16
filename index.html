@@ -80,7 +80,7 @@
         .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
         .custom-scroll::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 4px; }
 
-        /* Estilos universales para el botón de AR (Sobrescribe estilos por defecto de Three.js) */
+        /* Estilos botón de Realidad Aumentada */
         #ARButton {
             position: absolute !important;
             top: 1.5rem !important; 
@@ -160,7 +160,7 @@
 
         <a href="https://artstudiocol.com" target="_blank" class="w-full max-w-sm py-3 mt-1 rounded-xl bg-transparent text-white/50 hover:text-champagne transition-colors font-sans text-[10px] tracking-[0.1em] uppercase flex items-center justify-center gap-2">
             Visitar ArtStudioCol.com <i class="ph ph-arrow-up-right"></i>
-        </a >
+        </a>
     </div>
 
     <div id="modal-historia" class="modal">
@@ -252,13 +252,8 @@
 
     <script>
         // 1. GESTIÓN DE MODALES
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
+        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
 
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', function(e) {
@@ -312,30 +307,29 @@
             spotlight.penumbra = 0.4;
             scene.add(spotlight);
 
-            // NUEVO: Usar un Group en lugar de Mesh con múltiples materiales (Corrige error AR iOS)
             painting = new THREE.Group();
             painting.position.y = aspect < 1 ? 1.5 : 0; 
             scene.add(painting);
 
-            // Detección robusta de iOS (incluyendo iPads modernos)
+            // Detección correcta y estructurada de sistemas
             const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && !window.MSStream;
 
+            // Preparación del botón AR dependiendo del Sistema
             if (isIOS) {
-                // En iOS creamos un enlace directo para evitar que Safari bloquee el AR
                 arButtonElement = document.createElement('a');
                 arButtonElement.id = 'ARButton';
                 arButtonElement.innerHTML = '<i class="ph ph-spinner-gap animate-spin text-sm"></i> PREPARANDO AR...';
                 document.body.appendChild(arButtonElement);
                 
                 arButtonElement.addEventListener('click', (e) => {
-                    if (!arButtonElement.href) {
+                    if (!arButtonElement.getAttribute('href') || arButtonElement.getAttribute('href') === '#') {
                         e.preventDefault();
                         alert("El modelo AR se está preparando. Espera unos segundos y vuelve a intentar.");
                     }
                 });
             } else {
-                // WebXR estándar para Android
                 arButtonElement = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+                arButtonElement.id = 'ARButton';
                 arButtonElement.innerHTML = '<i class="ph ph-bounding-box text-sm"></i> VER EN PARED (AR)';
                 document.body.appendChild(arButtonElement);
 
@@ -352,53 +346,80 @@
                 });
             }
 
-            // Cargar textura y construir mallas de forma segura
+            // CARGA DE TEXTURA CON CORS HABILITADO (Evita error de renderizado en exportador AR)
             const textureLoader = new THREE.TextureLoader();
+            textureLoader.setCrossOrigin('anonymous');
             const imageUrl = 'IMG_6383.jpeg'; 
 
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
+                // -- Materiales 3D Interactivos Web --
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
                 });
-                
                 const sideMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x000000, roughness: 0.85, metalness: 0.1 
                 });
                 
-                // Malla 1: La estructura negra trasera y lateral
+                // Malla marco
                 const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.18), sideMaterial);
                 painting.add(baseMesh);
                 
-                // Malla 2: El lienzo frontal con la imagen
-                const frontMesh = new THREE.Mesh(new THREE.PlaneGeometry(8.5, 5.6), paintMaterial);
-                frontMesh.position.z = 0.091; 
+                // Malla lienzo (Ajuste a Box para evitar crasheo de PlaneGeometry)
+                const frontMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.01), paintMaterial);
+                frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // Generar modelo nativo USDZ silenciosamente en iOS cuando la imagen esté lista
+                // --- GENERACIÓN SEGURA DEL MODELO USDZ PARA IOS ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
-                        const clone = painting.clone();
-                        clone.scale.set(0.2, 0.2, 0.2); // Escalar a proporciones de pared reales
                         
-                        const arraybuffer = await exporter.parse(clone);
-                        const blob = new Blob([arraybuffer], { type: 'application/octet-stream' });
+                        // Creamos una malla secundaria dedicada EXCLUSIVAMENTE al AR
+                        // sin BumpMaps y con geometrías volumétricas estables
+                        const arGroup = new THREE.Group();
+                        
+                        const arFrame = new THREE.Mesh(
+                            new THREE.BoxGeometry(8.5, 5.6, 0.18),
+                            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
+                        );
+                        
+                        const arCanvas = new THREE.Mesh(
+                            new THREE.BoxGeometry(8.5, 5.6, 0.02),
+                            new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture, roughness: 0.5 })
+                        );
+                        arCanvas.position.z = 0.1; // Ligeramente adelante
+                        
+                        arGroup.add(arFrame);
+                        arGroup.add(arCanvas);
+                        arGroup.scale.set(0.2, 0.2, 0.2); // Tamaño para pared
+                        
+                        // Parse y construcción
+                        const arraybuffer = await exporter.parse(arGroup);
+                        const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
                         const arUrl = URL.createObjectURL(blob);
                         
-                        arButtonElement.href = arUrl;
-                        arButtonElement.rel = 'ar';
-                        arButtonElement.download = 'obra.usdz';
+                        arButtonElement.setAttribute('href', arUrl);
+                        arButtonElement.setAttribute('rel', 'ar');
+                        arButtonElement.setAttribute('download', 'obra.usdz');
                         arButtonElement.innerHTML = '<i class="ph ph-bounding-box text-sm"></i> VER EN PARED (AR)';
+                        
+                        // Nodo requerido por iOS para activar correctamente QuickLook
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.style.display = 'none';
+                        arButtonElement.appendChild(img);
+
                     } catch(e) {
-                        console.error("Error crítico exportando AR iOS:", e);
+                        console.error("Error USDZ iOS:", e);
                         arButtonElement.innerHTML = '<i class="ph ph-warning text-sm"></i> ERROR AR';
+                        arButtonElement.onclick = () => alert("Fallo en la textura: " + e.message);
                     }
                 }
             }, undefined, function(err) {
-                console.warn("⚠️ ERROR: No se pudo cargar la imagen " + imageUrl);
+                console.warn("⚠️ ERROR cargando imagen " + imageUrl);
             });
 
             window.addEventListener('resize', onWindowResize, false);
@@ -429,7 +450,7 @@
             init3D();
         }
 
-        // --- LÓGICA DE INTERFAZ 3D ---
+        // --- LÓGICA DE INTERFAZ Y TRANSICIÓN 3D ---
         btnActivate3D.addEventListener('click', () => {
             container3D.classList.remove('pointer-events-none');
             controls.autoRotate = false;
@@ -439,6 +460,7 @@
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
             gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4, delay: 0.2});
             
+            // Mostrar el botón AR al entrar al lienzo
             if(arButtonElement) arButtonElement.classList.add('active-3d');
         });
 
@@ -458,6 +480,7 @@
             gsap.to(actionMenu, {opacity: 1, y: 0, pointerEvents: 'auto', duration: 0.4, delay: 0.3});
             gsap.to(infoOverlay, {opacity: 1, y: 0, duration: 0.4, delay: 0.3});
             
+            // Ocultar botón AR
             if(arButtonElement) arButtonElement.classList.remove('active-3d');
         });
     </script>
