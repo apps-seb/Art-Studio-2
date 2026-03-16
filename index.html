@@ -362,18 +362,23 @@
                 // --- MATERIALES VISTA WEB 3D ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
-                    bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
+                    bumpScale: 0.05, roughness: 0.6, metalness: 0.0
                 });
                 const sideMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x000000, roughness: 0.85, metalness: 0.1 
+                    color: 0x111111, roughness: 0.85, metalness: 0.1
                 });
                 
-                const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.18), sideMaterial);
-                painting.add(baseMesh);
+                const webMaterials = [
+                    sideMaterial, // right
+                    sideMaterial, // left
+                    sideMaterial, // top
+                    sideMaterial, // bottom
+                    paintMaterial, // front
+                    sideMaterial  // back
+                ];
                 
-                const frontMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.01), paintMaterial);
-                frontMesh.position.z = 0.095; 
-                painting.add(frontMesh);
+                const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.6, 0.18), webMaterials);
+                painting.add(baseMesh);
 
                 // --- GENERADOR AR NATIVO PARA IOS ---
                 if (isIOS && arButtonElement) {
@@ -387,23 +392,10 @@
                         const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
                         arFrameGeom.scale(arScale, arScale, arScale);
                         
-                        // 2. SOLUCIÓN TEXTURA: Crear un Canvas para forzar a incrustar la imagen físicamente
-                        // Y usar un solo BoxGeometry con materiales por cara para evitar Z-fighting
-                        const canvas = document.createElement('canvas');
-                        canvas.width = texture.image.width || 1024;
-                        canvas.height = texture.image.height || 1024;
-                        const ctx = canvas.getContext('2d');
-
-                        // Flip vertical context for proper texture mapping on BoxGeometry
-                        ctx.translate(0, canvas.height);
-                        ctx.scale(1, -1);
-                        ctx.drawImage(texture.image, 0, 0, canvas.width, canvas.height);
-                        
-                        const bakedTexture = new THREE.CanvasTexture(canvas);
-                        bakedTexture.encoding = THREE.sRGBEncoding;
-                        // En Three.js BoxGeometry el material en index 4 es la cara frontal (+Z)
-                        const arFrontMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, map: bakedTexture, roughness: 0.5 });
-                        const arSideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+                        // 2. SOLUCIÓN TEXTURA: Usar la textura original con BoxGeometry
+                        // El material en index 4 es la cara frontal (+Z)
+                        const arFrontMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture, bumpMap: texture, bumpScale: 0.05, roughness: 0.6, metalness: 0.0 });
+                        const arSideMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.85, metalness: 0.1 });
                         
                         const materials = [
                             arSideMaterial, // right
