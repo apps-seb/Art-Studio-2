@@ -141,6 +141,23 @@
 
     <div id="canvas-3d-container" class="absolute inset-0 w-full h-full z-10 pointer-events-none cursor-grab active:cursor-grabbing"></div>
 
+    <div id="tutorial-3d" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 z-20 transition-opacity duration-500">
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-center gap-4 text-center border border-champagne/40">
+            <p class="font-serif text-lg text-champagne mb-1">Controles de Exploración</p>
+            <div class="flex gap-8">
+                <div class="flex flex-col items-center gap-2">
+                    <i class="ph ph-hand-swipe-left text-3xl text-white"></i>
+                    <span class="text-[10px] text-white/80 tracking-widest uppercase">1 Dedo<br>Rotar</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <i class="ph ph-arrows-out text-3xl text-white"></i>
+                    <span class="text-[10px] text-white/80 tracking-widest uppercase">2 Dedos<br>Zoom</span>
+                </div>
+            </div>
+            <p class="text-[9px] text-champagne/80 mt-2 tracking-widest uppercase animate-pulse">Toca la pantalla para comenzar</p>
+        </div>
+    </div>
+
     <button id="btn-close-3d" class="absolute top-6 left-6 z-40 px-5 py-2 rounded-full border border-champagne/50 bg-black/60 text-champagne flex items-center gap-2 hover:bg-champagne hover:text-black transition-all opacity-0 pointer-events-none font-sans text-[10px] tracking-[0.2em] uppercase backdrop-blur-md">
         <i class="ph ph-x text-sm"></i> Salir de Exploración
     </button>
@@ -165,6 +182,13 @@
         <a href="https://artstudiocol.com" target="_blank" class="w-full max-w-sm py-3 mt-1 rounded-xl bg-transparent text-white/50 hover:text-champagne transition-colors font-sans text-[10px] tracking-[0.1em] uppercase flex items-center justify-center gap-2">
             Visitar ArtStudioCol.com <i class="ph ph-arrow-up-right"></i>
         </a>
+    </div>
+
+    <div id="tutorial-ar" class="hidden absolute bottom-20 left-0 w-full flex justify-center z-50 pointer-events-none">
+        <div class="glass-panel px-6 py-3 rounded-full flex items-center gap-3 border border-champagne/40 shadow-[0_0_20px_rgba(200,169,126,0.3)] animate-bounce">
+            <i class="ph ph-device-mobile-camera text-2xl text-champagne"></i>
+            <span class="text-xs text-white tracking-[0.1em] uppercase font-sans font-medium">Mueve tu teléfono para explorar</span>
+        </div>
     </div>
 
     <div id="modal-historia" class="modal">
@@ -271,6 +295,11 @@
         const btnClose3D = document.getElementById('btn-close-3d');
         const infoOverlay = document.getElementById('info-overlay');
         const actionMenu = document.getElementById('action-menu');
+        
+        // Elementos de Tutorial
+        const tutorial3D = document.getElementById('tutorial-3d');
+        const tutorialAR = document.getElementById('tutorial-ar');
+        let tutorial3DDone = false;
 
         let scene, camera, renderer, controls, painting;
         let arButtonElement;
@@ -332,7 +361,12 @@
                     }
                 });
             } else {
-                arButtonElement = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+                // Configuramos domOverlay para Android WebXR para poder mostrar HTML encima
+                arButtonElement = ARButton.createButton(renderer, { 
+                    requiredFeatures: ['hit-test'],
+                    optionalFeatures: ['dom-overlay'],
+                    domOverlay: { root: document.body }
+                });
                 arButtonElement.id = 'ARButton';
                 arButtonElement.innerHTML = '<i class="ph ph-bounding-box text-sm"></i> VER EN PARED (AR)';
                 document.body.appendChild(arButtonElement);
@@ -340,14 +374,32 @@
                 renderer.xr.addEventListener('sessionstart', () => {
                     painting.userData.originalPos = painting.position.clone();
                     painting.userData.originalScale = painting.scale.clone();
-                    // En Android si funciona escalar el grupo entero
-                    painting.scale.set(0.2, 0.2, 0.2);
+                    painting.scale.set(0.1, 0.1, 0.1);
                     painting.position.set(0, 0, -2); 
+                    
+                    // Ocultar UI de navegación web durante la sesión AR
+                    infoOverlay.style.display = 'none';
+                    actionMenu.style.display = 'none';
+                    btnClose3D.style.display = 'none';
+                    
+                    // Mostrar tutorial AR
+                    tutorialAR.classList.remove('hidden');
+                    
+                    // Ocultar tutorial AR automáticamente después de 5 segundos
+                    setTimeout(() => {
+                        tutorialAR.classList.add('hidden');
+                    }, 5000);
                 });
 
                 renderer.xr.addEventListener('sessionend', () => {
                     painting.scale.copy(painting.userData.originalScale);
                     painting.position.copy(painting.userData.originalPos);
+                    
+                    // Restaurar UI
+                    infoOverlay.style.display = '';
+                    actionMenu.style.display = '';
+                    btnClose3D.style.display = '';
+                    tutorialAR.classList.add('hidden');
                 });
             }
 
@@ -358,7 +410,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D (Se mantiene para la web) ---
+                // --- MATERIALES VISTA WEB 3D ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,20 +426,17 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (SOLO EL BASTIDOR - ESTADO ANTERIOR FUNCIONAL) ---
+                // --- GENERADOR AR NATIVO PARA IOS ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // 1. CLONAR LA TEXTURA: Solo afectamos la versión de AR
                         const arTexture = texture.clone();
-                        arTexture.flipY = false; // Azul abajo
+                        arTexture.flipY = true;
                         arTexture.needsUpdate = true;
 
-                        // 2. SOLO EL BASTIDOR DEL CUADRO: Eliminamos el marco oscuro
-                        // Volvemos a un bastidor sólido de 5cm (0.05 crudo) para evitar fallos de profundidad.
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.05); 
+                        const arCanvasGeom = new THREE.BoxGeometry(0.85, 0.56, 0.005); 
 
                         const arCanvas = new THREE.Mesh(
                             arCanvasGeom,
@@ -399,10 +448,6 @@
                         );
                         arGroup.add(arCanvas);
 
-                        // 3. TAMAÑO AJUSTADO: Mantenemos la escala de 0.1
-                        arGroup.scale.set(0.1, 0.1, 0.1);
-
-                        // Procesamos el modelo compuesto
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
@@ -429,6 +474,15 @@
             });
 
             window.addEventListener('resize', onWindowResize, false);
+            
+            // Ocultar tutorial 3D web al interactuar por primera vez
+            container3D.addEventListener('pointerdown', () => {
+                if(!tutorial3DDone && tutorial3D.style.opacity > 0) {
+                    tutorial3DDone = true;
+                    gsap.to(tutorial3D, {opacity: 0, duration: 0.3, pointerEvents: 'none'});
+                }
+            });
+
             animate3D();
         }
 
@@ -466,12 +520,20 @@
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
             gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4, delay: 0.2});
             
+            // Mostrar tutorial si no se ha completado
+            if(!tutorial3DDone) {
+                gsap.to(tutorial3D, {opacity: 1, duration: 0.5, delay: 0.6});
+            }
+
             if(arButtonElement) arButtonElement.classList.add('active-3d');
         });
 
         btnClose3D.addEventListener('click', () => {
             container3D.classList.add('pointer-events-none');
             controls.autoRotate = true; 
+            
+            // Ocultar tutorial web si el usuario sale sin interactuar
+            gsap.to(tutorial3D, {opacity: 0, duration: 0.2});
             
             const aspect = window.innerWidth / window.innerHeight;
             const targetY = aspect < 1 ? 1.5 : 0;
