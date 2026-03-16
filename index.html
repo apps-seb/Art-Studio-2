@@ -189,7 +189,7 @@
                     <span class="text-champagne italic">"El arte nos ha permitido decir aquello que las palabras aún no logran articular. Cada trazo es un paso hacia la reconciliación, con nosotros mismos y con la tierra que habitamos."</span>
                 </p>
                 <p>
-                    El relieve que puedes observar en la pintura representa las cicatrices del pasado, integradas ahora en una nueva belleza, demostrando que la paz no es el olvido, sino la transformación consciente de nuestra memory.
+                    El relieve que puedes observar en la pintura representa las cicatrices del pasado, integradas ahora en una nueva belleza, demostrando que la paz no es el olvido, sino la transformación consciente de nuestra memoria.
                 </p>
             </div>
         </div>
@@ -358,7 +358,7 @@
             textureLoader.load(imageUrl, async function(texture) {
                 texture.encoding = THREE.sRGBEncoding;
 
-                // --- MATERIALES VISTA WEB 3D (Se mantiene para la web) ---
+                // --- MATERIALES VISTA WEB 3D ---
                 const paintMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff, map: texture, bumpMap: texture,
                     bumpScale: 0.05, roughness: 0.4, metalness: 0.05 
@@ -374,36 +374,43 @@
                 frontMesh.position.z = 0.095; 
                 painting.add(frontMesh);
 
-                // --- GENERADOR AR NATIVO PARA IOS (SOLO EL LIENZO - PRUEBA) ---
+                // --- GENERADOR AR NATIVO PARA IOS ---
                 if (isIOS && arButtonElement) {
                     try {
                         const exporter = new THREE.USDZExporter();
                         const arGroup = new THREE.Group();
                         
-                        // CORRECCIÓN 1: VOLTEAR LA TEXTURA (Lo azul debe aparecer abajo)
-                        // Three.js por defecto tiene flipY = true. Lo cambiamos a false para voltear.
-                        texture.flipY = false;
-
-                        // 1. SOLO EL LIENZO (Sin marco extra)
-                        // Le damos un grosor de 5cm (0.05 crudo) para que parezca un cuadro/bastidor
-                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.05); 
+                        // 1. SOLUCIÓN ESCALA: Hornear la escala directamente en la geometría
+                        const arFrameGeom = new THREE.BoxGeometry(8.5, 5.6, 0.18);
+                        arFrameGeom.scale(0.2, 0.2, 0.2); 
+                        const arFrame = new THREE.Mesh(
+                            arFrameGeom,
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0x111111, 
+                                roughness: 0.8,
+                                metalness: 0.2 
+                            })
+                        );
+                        
+                        // 2. SOLUCIÓN TEXTURA: Pasar la textura cargada originalmente
+                        const arCanvasGeom = new THREE.BoxGeometry(8.5, 5.6, 0.02);
+                        arCanvasGeom.scale(0.2, 0.2, 0.2);
                         const arCanvas = new THREE.Mesh(
                             arCanvasGeom,
                             new THREE.MeshStandardMaterial({ 
                                 color: 0xffffff, 
-                                map: texture, 
-                                roughness: 0.5 
+                                map: texture, // <--- Aquí usamos la textura directamente
+                                roughness: 0.5,
+                                metalness: 0.1
                             })
                         );
                         
+                        arCanvas.position.z = 0.02; 
+                        
+                        arGroup.add(arFrame);
                         arGroup.add(arCanvas);
-
-                        // CORRECCIÓN 2: REDUCIR EL TAMAÑO (Estaba "muy grande")
-                        // Cambiamos la escala de 0.2 a 0.1 para que tenga un tamaño proporcional
-                        // a un cuadro de galería estándar (aprox. 85cm x 56cm).
-                        arGroup.scale.set(0.1, 0.1, 0.1);
-
-                        // Procesamos el modelo único
+                        
+                        // Procesamos el modelo (el exportador extraerá la imagen de 'texture')
                         const arraybuffer = await exporter.parse(arGroup);
                         
                         const blob = new Blob([arraybuffer], { type: 'model/vnd.usdz+zip' });
