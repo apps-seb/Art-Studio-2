@@ -34,6 +34,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/ARButton.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
@@ -104,6 +105,10 @@
         
         <button id="btn-activate-3d" class="w-full max-w-sm py-4 rounded-xl border border-champagne text-forest bg-champagne hover:bg-white hover:border-white transition-colors font-sans text-xs font-semibold tracking-[0.2em] uppercase flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(200,169,126,0.2)]">
             <i class="ph ph-cube text-lg"></i> Explorar Obra en 3D
+        </button>
+
+        <button id="btn-activate-ar" class="w-full max-w-sm py-3 rounded-xl border border-champagne/50 text-champagne bg-black/40 backdrop-blur-md hover:bg-champagne hover:text-black hover:border-champagne transition-colors font-sans text-xs font-semibold tracking-[0.2em] uppercase flex items-center justify-center gap-2" style="display: none;">
+            <i class="ph ph-bounding-box text-lg"></i> Ver en mi espacio (AR)
         </button>
 
         <div class="flex w-full max-w-sm gap-3">
@@ -251,6 +256,9 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.outputEncoding = THREE.sRGBEncoding;
+            
+            // Habilitar WebXR para la Realidad Aumentada
+            renderer.xr.enabled = true;
             container3D.appendChild(renderer.domElement);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -310,11 +318,61 @@
             const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, paintMaterial, paintMaterial];
 
             painting = new THREE.Mesh(geometry, materials);
-            painting.position.y = aspect < 1 ? 1.5 : 0; 
-            scene.add(painting);
+            
+            // Un Grupo ayuda a manejar la escala diferenciada entre la vista 3D en pantalla y la vista AR
+            const paintingGroup = new THREE.Group();
+            paintingGroup.add(painting);
+            
+            paintingGroup.position.y = aspect < 1 ? 1.5 : 0; 
+            scene.add(paintingGroup);
+
+            // Guardamos la referencia global para la animación (ya que se anima su posición o escala)
+            window.paintingGroup = paintingGroup;
+            window.painting = painting; 
+
+            // Integrar ARButton al dom de ThreeJS (oculto por defecto)
+            const arButtonEl = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+            arButtonEl.style.display = 'none'; // lo ocultamos para estilizar uno propio o integrarlo a nuestra UI
+            document.body.appendChild(arButtonEl);
+
+            // Escuchar el inicio y fin de sesión AR
+            renderer.xr.addEventListener('sessionstart', () => {
+                // Al entrar a AR, escalar el grupo para que sea de tamaño real (0.85m x 0.56m)
+                // y posicionarlo un poco hacia adelante de la cámara (-1.5m en Z) y en altura central (0).
+                gsap.killTweensOf(paintingGroup.position);
+                gsap.killTweensOf(paintingGroup.scale);
+                
+                paintingGroup.scale.set(0.1, 0.1, 0.1); 
+                paintingGroup.position.set(0, 0, -1.5);
+                
+                // Ocultamos la UI regular
+                gsap.to(actionMenu, {opacity: 0, pointerEvents: 'none', duration: 0.3});
+                gsap.to(infoOverlay, {opacity: 0, pointerEvents: 'none', duration: 0.3});
+                gsap.to(btnClose3D, {opacity: 0, pointerEvents: 'none', duration: 0.3});
+            });
+
+            renderer.xr.addEventListener('sessionend', () => {
+                // Al salir de AR, restaurar la escala y posición
+                paintingGroup.scale.set(1, 1, 1);
+                
+                const currentAspect = window.innerWidth / window.innerHeight;
+                paintingGroup.position.set(0, currentAspect < 1 ? 1.5 : 0, 0);
+
+                // Restaurar la UI de exploración si es que estaba activo el modo 3D
+                if (!container3D.classList.contains('pointer-events-none')) {
+                    gsap.to(btnClose3D, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
+                } else {
+                    gsap.to(actionMenu, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
+                    gsap.to(infoOverlay, {opacity: 1, pointerEvents: 'auto', duration: 0.4});
+                }
+            });
+
+            window.arButtonEl = arButtonEl;
 
             window.addEventListener('resize', onWindowResize, false);
-            animate3D();
+            
+            // Usar setAnimationLoop en lugar de requestAnimationFrame es obligatorio para WebXR
+            renderer.setAnimationLoop(animate3D);
         }
 
         function onWindowResize() {
@@ -322,12 +380,13 @@
             camera.aspect = aspect;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            painting.position.y = aspect < 1 ? 1.5 : 0;
+            if(window.paintingGroup) {
+                window.paintingGroup.position.y = aspect < 1 ? 1.5 : 0;
+            }
             camera.position.z = aspect < 1 ? 14 : 9;
         }
 
         function animate3D() {
-            requestAnimationFrame(animate3D);
             controls.update(); 
             renderer.render(scene, camera);
         }
@@ -336,11 +395,29 @@
             init3D();
         }
 
-        // --- LÓGICA DE BOTONES 3D ---
+        // --- LÓGICA DE BOTONES 3D y AR ---
+        const btnActivateAR = document.getElementById('btn-activate-ar');
+
+        // Mostrar el botón de AR si la API está disponible (detectamos la creación del botón de ThreeJS)
+        if ('xr' in navigator) {
+            navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                if (supported) {
+                    btnActivateAR.style.display = 'flex';
+                }
+            });
+        }
+
+        btnActivateAR.addEventListener('click', () => {
+            // El botón generado por ThreeJS ARButton está oculto en el DOM. Simplemente le hacemos click.
+            if(window.arButtonEl) {
+                window.arButtonEl.click();
+            }
+        });
+
         btnActivate3D.addEventListener('click', () => {
             container3D.classList.remove('pointer-events-none');
             controls.autoRotate = false;
-            gsap.to(painting.position, { y: 0, duration: 1, ease: 'power2.out' });
+            gsap.to(window.paintingGroup.position, { y: 0, duration: 1, ease: 'power2.out' });
             
             gsap.to(actionMenu, {opacity: 0, y: 20, pointerEvents: 'none', duration: 0.4});
             gsap.to(infoOverlay, {opacity: 0, y: -20, duration: 0.4});
@@ -355,7 +432,7 @@
             const targetY = aspect < 1 ? 1.5 : 0;
             const targetZ = aspect < 1 ? 14 : 9;
 
-            gsap.to(painting.position, { y: targetY, duration: 1.5, ease: 'power2.inOut' });
+            gsap.to(window.paintingGroup.position, { y: targetY, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(camera.position, { x: 0, y: 0, z: targetZ, duration: 1.5, ease: 'power2.inOut' });
             gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: 'power2.inOut' });
             
